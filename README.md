@@ -1,16 +1,29 @@
-# React + Vite
+Gemini said
+Since you've just pushed your project to GitHub, a professional README is the "front door" to your code. Given your cinematic, Telegram Blue aesthetic and the sharp micro-radius design, this README reflects that "Pro" energy.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Replace the placeholder text and image links with your actual project details.
 
-Currently, two official plugins are available:
+Playgram
+A high-end, cinematic movie discovery platform built with React and Vite.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Playgram is designed for film enthusiasts who value a sharp, "Apple-style" user interface. It features a custom-built search experience, fluid "glass wave" hover interactions, and a fully responsive navigation system.
 
-## React Compiler
+ Features
+Pro Search Interface: A seamless, auto-focusing search bar that replaces the logo on mobile for a focused user experience.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Cinematic Hover Effects: "Glittering glass" wave animations on movie posters that simulate light reflecting off polished glass.
 
-## Expanding the ESLint configuration
+Intelligent Navigation: Adaptive breadcrumbs and a "Back" trigger that automatically syncs with your browsing history.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Modern Tech Stack: Built using React 18, Vite for lightning-fast HMR, and FontAwesome for sharp iconography.
+
+Brand Aesthetic: A deep navy and near-black theme centered around Telegram Blue (#3390EC) action items.
+
+Tech Stack
+Category	Technology
+Frontend	React.js, Vite
+Styling	CSS3 (Custom Variables, Keyframe Animations)
+Icons	FontAwesome
+Routing	React Router Dom
+Design	Neo-noir / Cinematic UI
+🚀 Getting Started
