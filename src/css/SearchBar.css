@@ -4,7 +4,7 @@
     align-items: center;
     justify-content: center;
    margin-left: auto;
-   background: rgba(255, 255, 255, 0.03); /* Extremely subtle glass effect */
+   background: rgba(255, 255, 255, 0.03); 
     border: 1px solid var(--border-subtle);
     border-radius: 0; 
     overflow: hidden;
@@ -20,7 +20,7 @@
     color: var(--text-main);
     font-size: 0.85rem;
     outline: none;
-    transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    transition: 
         opacity 0.3s ease,
         transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
         margin 0.4s ease;
