@@ -38,9 +38,9 @@ button:focus-visible {
     outline-offset: 2px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   main, .content-container {
-    padding-top: 80px;    /* Prevents logo from covering top movies */
+    padding-top: 50px;    /* Prevents logo from covering top movies */
     padding-bottom: 90px; /* Prevents nav from covering bottom movies */
   }
 }

@@ -3,9 +3,11 @@ import { Route, Routes } from "react-router-dom";
 import { useRef, useState } from "react";
 import "./css/App.css";
 import Favourite from "./pages/Favourites";
+import Genre from "./pages/Genre";
 import NavBar from "./components/NavBar";
 import SlideUp from "./components/SlideUp";
 import MovieInfo from "./components/MovieInfo";
+import SearchResults from "./components/SearchResults";
 
 function App() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -26,6 +28,7 @@ function App() {
       });
     }
   };
+
   return (
     <div className="app-container">
       <NavBar isScrolled={isScrolled} />
@@ -36,7 +39,10 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/favourite" element={<Favourite />} />
+          <Route path="/genre" element={<Genre />} />
+          <Route path="/genre/:genreId" element={<Home />} />
           <Route path="/movie/:id" element={<MovieInfo />} />
+          <Route path="/search" element={<SearchResults />} />
         </Routes>
       </main>
     </div>

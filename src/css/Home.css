@@ -2,7 +2,7 @@
 .movie-grid{
     display:grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    margin-top: 10px;
+    margin-top: 0px;
     align-items: center;
     justify-content: space-between;
     padding: 0.9rem 3.2rem;
@@ -10,15 +10,16 @@
     overflow: hidden;
 }
 
-@media (max-width:720px) {
+@media (max-width:768px) {
+   
     .movie-grid{
         margin-top: 1px;
-      grid-template-columns: 1fr; 
-        padding: 1.2rem;
+        grid-template-columns: 1fr; 
+        padding: 0.4rem;
         gap: 1.5rem;
-    padding-bottom: 90px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+        padding-bottom: 90px;
+        overflow-y: auto;
+       -webkit-overflow-scrolling: touch;
     }
 }
 

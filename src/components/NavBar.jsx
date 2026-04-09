@@ -7,7 +7,7 @@ import { useMovieContext } from "../contexts/MovieContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
-  faTags,
+  faFilm,
   faHeart,
   faSearch,
   faArrowLeftLong,
@@ -112,15 +112,15 @@ function Navbar({ isScrolled }) {
         </NavLink>
 
         <NavLink
-          to="/downloads"
+          to="/genre"
           className={({ isActive }) =>
             isActive ? "icon-active" : "icon-default"
           }
         >
-          <span className="nav-text">Watchlist</span>
+          <span className="nav-text">Genre</span>
           <div className="icon-container">
-            <FontAwesomeIcon icon={faTags} className="icon-outline" />
-            <p className="icon-outline-p">Watchlist</p>
+            <FontAwesomeIcon icon={faFilm} className="icon-outline" />
+            <p className="icon-outline-p">Genre</p>
           </div>
         </NavLink>
 

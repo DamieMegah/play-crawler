@@ -1,4 +1,3 @@
-import { parse } from "@fortawesome/fontawesome-svg-core";
 import { createContext, useState, useContext, useEffect } from "react";
 
 const MovieContext = createContext();
@@ -32,11 +31,9 @@ export const MovieProvider = ({ children }) => {
   };
   // Helper function to restore rev =>prev.filter(Home without an API call
   const restoreHome = () => {
-    const cachedMovies = localStorage.getItem("popular_movies");
-    if (cachedMovies) {
-      setMovies(JSON.parse(cachedMovies));
-      setError(null);
-    }
+    setMovies([]);
+    setError(null);
+    setLoading(false);
   };
 
   return (

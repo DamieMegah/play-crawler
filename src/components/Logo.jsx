@@ -5,7 +5,7 @@ function Logo() {
     <div>
       <Link to="/" className="nav-brand">
         PL
-        <span className="play">▶</span>Y<span>gram</span>
+        <span className="play">▶</span>Y<span>crawler</span>
       </Link>
     </div>
   );

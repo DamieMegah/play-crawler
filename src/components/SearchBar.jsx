@@ -11,33 +11,15 @@ function SearchBar({ onClose }) {
   const { setMovies, setLoading, loading, setError } = useMovieContext();
   const navigate = useNavigate();
 
-  const handleSearch = async (e) => {
+  const handleSearch = (e) => {
     e.preventDefault();
-    await navigate("/");
-    if (!searchQuery.trim()) {
-      return;
-    }
-    if (loading) {
-      return;
-    }
 
-    setLoading(true);
-    try {
-      const searchResults = await searchMovies(searchQuery);
+    const query = searchQuery.trim();
+    if (!query) return;
 
-      if (searchResults.length === 0) {
-        setError("No movies found for that search.");
-        setMovies([]);
-      } else {
-        setMovies(searchResults);
-        setError(null);
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Failed to search movies...");
-    } finally {
-      setLoading(false);
-    }
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+
+    if (onClose) onClose();
   };
 
   const inputRef = useRef(null);
