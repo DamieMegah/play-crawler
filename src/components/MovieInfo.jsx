@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMovieContext } from "../contexts/MovieContext";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Loading from "./Loading";
 import {
@@ -10,12 +10,14 @@ import {
   faFilm,
   faClock,
   faCloudDownloadAlt,
+  faFrownOpen,
 } from "@fortawesome/free-solid-svg-icons";
 import { faYoutube, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import "../css/MovieInfo.css";
 
 function MovieInfo() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const {
     movies,
     loading,
@@ -34,7 +36,16 @@ function MovieInfo() {
   if (!movie)
     return (
       <div className="error-message">
-        <p>😔 Ooops!</p> <br /> Movie not found
+        <FontAwesomeIcon icon={faFrownOpen} className="icon" />
+        <p>Ooops!</p> <br />
+        <p>This movie can not be crawl at the moment</p>
+        <button
+          onClick={() => {
+            navigate(-1);
+          }}
+        >
+          Go back
+        </button>
       </div>
     );
 
