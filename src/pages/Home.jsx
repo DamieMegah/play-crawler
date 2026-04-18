@@ -29,9 +29,9 @@ function Home() {
     }
   };
 
-  //  Pull everything from the GLOBAL context
   const { movies, setMovies, loading, setLoading, error, setError } =
     useMovieContext();
+
   useEffect(() => {
     if (loading) return;
     if (movies.length > 0) return;
@@ -64,12 +64,11 @@ function Home() {
 
   return (
     <div className="home">
-      <Hero movies={movies} />
       <Genre onGenreSelect={handleGenreSelect} className="genre" />
 
       {error && <div className="error-message">{error}</div>}
 
-      {loading ? (
+      {loading && movies.length === 0 ? (
         <Loading />
       ) : (
         <div className="movie-grid">

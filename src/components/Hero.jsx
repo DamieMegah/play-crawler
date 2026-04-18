@@ -36,6 +36,7 @@ function Hero({ movies }) {
               <p>{movie.overview.substring(0, 150)}...</p>
               <button className="play-btn">
                 <FontAwesomeIcon icon={faPlay} className="icon" />
+                &nbsp;Crawl Movie
               </button>
             </div>
           </div>

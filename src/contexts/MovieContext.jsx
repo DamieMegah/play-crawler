@@ -31,9 +31,8 @@ export const MovieProvider = ({ children }) => {
   };
   // Helper function to restore rev =>prev.filter(Home without an API call
   const restoreHome = () => {
-    setMovies([]);
-    setError(null);
     setLoading(false);
+    setError(null);
   };
 
   return (

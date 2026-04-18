@@ -153,7 +153,23 @@
 
 /*  MOBILE SPECI (Home Page)*/
 @media (max-width: 768px) {
-  .genre-layout-home .genre-btn {
+  .genre-layout-home {
+  width: 95%;
+ 
+}
+  .genre-layout-home .genre-list {
+  padding: 0 0;
+}
+  .genre-list{
+    gap: 5px;
+     padding: 0 0;
+  }
+  .genre-btn{
+     font-size: 0.6rem;
+    padding: 4px 12px;
+    margin-left: auto;
+  }
+  .genre-layout-home  {
     font-size: 0.9rem;
     padding: 6px 15px;
     margin-left: auto;

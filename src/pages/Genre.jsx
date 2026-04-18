@@ -14,7 +14,8 @@ function Genre({ onGenreSelect }) {
   const { genreId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { loading, setLoading, setError } = useMovieContext();
+  const [loading, setLoading] = useState(false);
+  const [setError, error] = useState(null);
 
   const isGenrePage = location.pathname.startsWith("/genre");
   const pageStyle = isGenrePage ? "genre-layout-active" : "genre-layout-home";
@@ -65,38 +66,33 @@ function Genre({ onGenreSelect }) {
 
   useEffect(() => {
     const fetchMovies = async () => {
-      const cacheKey = genreId ? `movies_${genreId}` : "movies_popular";
-      const cachedData = localStorage.getItem(cacheKey);
-      const cacheTime = localStorage.getItem(`${cacheKey}_timestamp`);
-
-      const now = new Date().getTime();
-      const expiry = 60 * 60 * 1000;
-
-      if (cachedData && cacheTime && now - cacheTime < expiry) {
-        setLocalMovies(JSON.parse(cachedData));
-        setLoading(false);
+      if (!genreId) {
+        setLocalMovies([]);
         return;
       }
 
       setLoading(true);
-      try {
-        const data = genreId
-          ? await getMoviesByGenre(genreId)
-          : await getPopularMovies();
 
+      try {
+        const cacheKey = `movies_${genreId}`;
+        const cachedData = localStorage.getItem(cacheKey);
+
+        if (cachedData) {
+          setLocalMovies(JSON.parse(cachedData));
+          return;
+        }
+
+        const data = await getMoviesByGenre(genreId);
         setLocalMovies(data);
 
         localStorage.setItem(cacheKey, JSON.stringify(data));
-        localStorage.setItem(`${cacheKey}_timestamp`, now.toString());
-      } catch (err) {
-        setError("Failed to fetch movies");
       } finally {
         setLoading(false);
       }
     };
 
     fetchMovies();
-  }, [genreId, setLoading, setError]);
+  }, [genreId]);
 
   const handleGenreClick = (id) => {
     if (id) {
@@ -145,17 +141,19 @@ function Genre({ onGenreSelect }) {
         </div>
       </div>
 
-      <div className="genre-results">
-        {loading ? (
-          <Loading />
-        ) : (
-          <div className="movie-grid">
-            {localMovies.map((movie) => (
-              <MovieCard movie={movie} key={movie.id} />
-            ))}
-          </div>
-        )}
-      </div>
+      {genreId && (
+        <div className="genre-results">
+          {loading ? (
+            <Loading />
+          ) : (
+            <div className="movie-grid">
+              {localMovies.map((movie) => (
+                <MovieCard movie={movie} key={movie.id} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
