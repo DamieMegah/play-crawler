@@ -4,6 +4,7 @@
     height:60vh;
     overflow: hidden;
     font-family: var(--font-heading);
+    font-size: 100%;
 }
 
 .hero-wrapper {
@@ -18,7 +19,7 @@
     width: 20%;
     height: 100%;
     flex-shrink: 0;
-      background-size: cover;
+    background-size: cover;
     background-position: top center;
     position: relative;
 }
@@ -40,7 +41,7 @@
 .hero-overlay h1{
     font-size: var(--fs-hero);
     margin: 0;
-    text-shadow: 1px 2px 0px rgba(255, 255, 255, 0.266);
+    text-shadow: 1px 2px 0px rgba(0, 0, 0, 0.266);
 }
 
 .hero-overlay p{
@@ -100,4 +101,14 @@ animation: none;
 .dot.active {
     background: var(--primary-color);
     transform: scale(1.2);
+}
+
+@media (max-width:720px) {
+    .hero-container {
+        height:40vh;
+         font-size: 40%;
+    }
+    .hero-overlay h1{
+        font-size: large;
+    }
 }

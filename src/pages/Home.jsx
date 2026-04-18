@@ -2,7 +2,7 @@ import MovieCard from "../components/MovieCard";
 import "../css/Home.css";
 import { getPopularMovies, getMoviesByGenre } from "../services/api.js";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Loading from "../components/Loading";
 import { useMovieContext } from "../contexts/MovieContext";
 import Genre from "./Genre";
@@ -10,6 +10,8 @@ import Hero from "../components/Hero";
 
 function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isHome = location.pathname === "/";
 
   const handleGenreSelect = async (id) => {
     setLoading(true);
@@ -64,7 +66,13 @@ function Home() {
 
   return (
     <div className="home">
-      <Genre onGenreSelect={handleGenreSelect} className="genre" />
+      <div
+        className="genre"
+        style={{ position: isHome ? "absolute" : "static" }}
+      >
+        <Genre onGenreSelect={handleGenreSelect} className="genre" />
+      </div>
+      {isHome && <Hero movies={movies} />}
 
       {error && <div className="error-message">{error}</div>}
 

@@ -4,6 +4,7 @@
   gap: 20px;
   padding: 20px;
   margin-bottom: 30px;
+  position: static;
 }
 
 .genre-hero-card {
@@ -154,7 +155,7 @@
 /*  MOBILE SPECI (Home Page)*/
 @media (max-width: 768px) {
   .genre-layout-home {
-  width: 95%;
+  width: 92%;
  
 }
   .genre-layout-home .genre-list {
