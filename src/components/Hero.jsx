@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "../css/Hero.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
 
 function Hero({ movies }) {
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const topFive = movies.slice(0, 5);
 
@@ -34,7 +36,10 @@ function Hero({ movies }) {
             <div className="hero-overlay">
               <h1>{movie.title}</h1>
               <p>{movie.overview.substring(0, 150)}...</p>
-              <button className="play-btn">
+              <button
+                className="play-btn"
+                onClick={() => navigate(`/movie/${movie.id}`)}
+              >
                 <FontAwesomeIcon icon={faPlay} className="icon" />
                 &nbsp;Crawl Movie
               </button>
