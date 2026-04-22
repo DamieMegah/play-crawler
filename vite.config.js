@@ -12,7 +12,7 @@ export default defineConfig({
         name: "Play Crawler",
         short_name: "PlayCrawl",
         description: "Movie link crawling App",
-        theme_color: "#3390EC",
+        theme_color: "#1e79a7",
         background_color: "#01030c",
         display: "standalone",
         start_url: "/",
@@ -20,12 +20,14 @@ export default defineConfig({
           {
             src: "/logo-fin.png",
             sizes: "192x192",
-            type: "image/png"
+            type: "image/png",
+            purpose: "any maskable",
           },
           {
-            src: "/logo-512.png",
+            src: "/logo-fin.png",
             sizes: "512x512",
-            type: "image/png"
+            type: "image/png",
+            purpose: "any maskable",
           }
         ]
       }
