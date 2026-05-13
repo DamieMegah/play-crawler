@@ -22,7 +22,7 @@ function MovieCard({ movie }) {
     localStorage.setItem("selected_movie", JSON.stringify(movie));
   };
   return (
-    <NavLink to={`/movie/${movie.id}`} className="movie-card">
+    <NavLink to={`/movie/${movie.id}`} state={{ movie }} className="movie-card">
       <div className="movie-poster" onClick={handleCardClick}>
         <img
           src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}

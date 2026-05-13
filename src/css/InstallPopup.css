@@ -1,0 +1,70 @@
+.install-popup {
+  position: fixed;
+  top: 80px;
+  left: -400px;
+  width: 320px;
+  z-index: 9999;
+  transition:
+    left 0.35s ease,
+    opacity 0.35s ease,
+    transform 0.2s ease;
+  touch-action: pan-y;
+}
+
+.install-popup.show {
+  left: 20px;
+  opacity: 1;
+}
+
+.install-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: var(--text-main);
+  border: 1px solid #e5e5e5;
+  padding: 12px 14px;
+  border-radius: 3px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.install-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #202124;
+}
+
+.install-text svg {
+  color: var(--primary-hover);
+  font-size: 18px;
+}
+
+.install-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.install-btn {
+  background: var(--primary-color);
+  color: var(--text-main);
+  border: none;
+  padding: 6px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.install-btn:hover {
+  background: var(--primary-hover);
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-muted);
+}

@@ -1,0 +1,97 @@
+.install-container {
+  min-height: 100vh;
+  padding: 2rem;
+  background: #0f0f0f;
+  color: white;
+}
+
+.install-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.install-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0rem;
+}
+
+.install-header small{
+   color: var(--primary-color);
+    
+}
+
+.install-header p {
+  color: #bdbdbd;
+  max-width: 700px;
+  margin: auto;
+  line-height: 1.6;
+   margin-top: 1rem;
+}
+
+.steps-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 900px;
+  margin: auto;
+}
+
+
+.step-card {
+  background: #1b1b1b;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #2c2c2c;
+  position: relative;
+  display :flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-number {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: red;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.step-image img {
+  width: 10rem;
+  height: auto;
+  display: block;
+}
+
+.step-content {
+  padding: 1.5rem;
+}
+
+.step-content h2 {
+  margin-bottom: 0.7rem;
+}
+
+.step-content p {
+  color: #c7c7c7;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .install-container {
+    padding: 1rem;
+  }
+
+  .install-header h1 {
+    font-size: 2rem;
+  }
+
+  .step-content {
+    padding: 1rem;
+  }
+}

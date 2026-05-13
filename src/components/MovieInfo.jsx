@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMovieContext } from "../contexts/MovieContext";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Loading from "./Loading";
 import {
@@ -17,6 +17,8 @@ import { faYoutube, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import "../css/MovieInfo.css";
 
 function MovieInfo() {
+  const location = useLocation();
+  const fallbackMovie = location.state?.movie;
   const { id } = useParams();
   const navigate = useNavigate();
   const {
@@ -28,27 +30,27 @@ function MovieInfo() {
     removeFromFavourites,
   } = useMovieContext();
   const [showCrawler, setShowCrawler] = useState(false);
+  const movieId = Number(id);
 
   const movie =
     movies.find((m) => m.id === Number(id)) ||
-    favourites.find((m) => m.id === Number(id));
-
+    favourites.find((m) => m.id === Number(id)) ||
+    fallbackMovie;
   if (loading) return <Loading />;
-  if (!movie)
+
+  if (!movie) {
     return (
       <div className="error-message">
         <FontAwesomeIcon icon={faFrownOpen} className="icon" />
-        <p>Ooops!</p> <br />
-        <p>This movie can not be crawl at the moment</p>
-        <button
-          onClick={() => {
-            navigate(-1);
-          }}
-        >
-          Go back
-        </button>
+
+        <p>Ooops!</p>
+
+        <p>This movie data is unavailable right now.</p>
+
+        <button onClick={() => navigate(-1)}>Go back</button>
       </div>
     );
+  }
 
   const favourite = isFavourite(movie.id);
   function handleHeart(e) {

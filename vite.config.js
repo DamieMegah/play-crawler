@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: "autoUpdate",
        includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
-        name: "Play Crawler",
-        short_name: "PlayCrawl",
+        name: "The Play Crawler",
+        short_name: "Play Crawler",
         description: "Movie link crawling App",
         theme_color: "#1e79a7",
         background_color: "#01030c",

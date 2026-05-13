@@ -9,6 +9,8 @@ import SlideUp from "./components/SlideUp";
 import MovieInfo from "./components/MovieInfo";
 import SearchResults from "./components/SearchResults";
 import About from "./pages/About";
+import InstallPWA from "./pages/InstallPWA";
+import InstallPopup from "./components/InstallPopUp";
 
 function App() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -44,8 +46,10 @@ function App() {
           <Route path="/movie/:id" element={<MovieInfo />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/About" element={<About />} />
+          <Route path="/installApp" element={<InstallPWA />} />
         </Routes>
       </main>
+      <InstallPopup />
     </div>
   );
 }

@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "../css/About.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTelegram,
   faGithub,
-  faGitAlt,
-  faSquareGithub,
+  faChrome,
 } from "@fortawesome/free-brands-svg-icons";
 import {
   faRoute,
@@ -16,57 +15,10 @@ import {
   faDownload,
 } from "@fortawesome/free-solid-svg-icons";
 import Logo from "../components/Logo";
-import { href } from "react-router-dom";
+import { href, Navigate } from "react-router-dom";
 
 function About() {
-  // PWA Installation Logic
-  const [prompt, setPrompt] = useState(null);
-
-  // init function
-  const initPWAInstall = () => {
-    const handler = (e) => {
-      e.preventDefault();
-      setPrompt(e);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  };
-
-  // trigger function
-  const triggerInstall = async () => {
-    if (!prompt) {
-      console.log("Install prompt not available");
-      return;
-    }
-
-    prompt.prompt();
-
-    const choice = await prompt.userChoice;
-
-    if (choice?.outcome === "accepted") {
-      console.log("App installed");
-    } else {
-      console.log("User dismissed install");
-    }
-
-    setPrompt(null);
-  };
-
-  useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setPrompt(e);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-    };
-  }, []);
-
+  const navigate = useNavigate();
   const handleShare = async () => {
     const shareData = {
       title: "PlayCrawler",
@@ -110,9 +62,20 @@ function About() {
           <h3>Install PlayCrawler</h3>
           <p>
             Get the best experience with full-screen mode and instant access
-            directly from your app drawer (powered by chrome browser)
+            directly from your app drawer (powered by Google Chrome{" "}
+            <FontAwesomeIcon
+              icon={faChrome}
+              style={{
+                color: "White",
+                fontSize: "18px",
+              }}
+            />
+            )
           </p>
-          <button onClick={triggerInstall} className="btn-action">
+          <button
+            onClick={() => navigate("/installApp")}
+            className="btn-action"
+          >
             Install App
           </button>
         </div>
