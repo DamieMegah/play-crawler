@@ -5,6 +5,7 @@ import {
   getMoviesByGenre,
   getPopularMovies,
   getMoviesKdrama,
+  getMoviesBollywood,
 } from "../services/api";
 import MovieCard from "../components/MovieCard";
 import Loading from "../components/Loading";
@@ -40,11 +41,12 @@ function Genre({ onGenreSelect }) {
     { id: 99, name: "Documentry", image: "/docu.jpg" },
     { id: 14, name: "Fantasy", image: "/fantasy.jpg" },
     { id: "kdrama", name: "k-Drama", image: "/kdrama.png" },
+    { id: "Bollywood", name: "Bollywood", image: "bollywood.png" },
   ];
 
   useEffect(() => {
     const shuffled = [...allHeroGenres].sort(() => 0.5 - Math.random());
-    setRandomGenres(shuffled.slice(0, 4));
+    setRandomGenres(shuffled.slice(0, 8));
   }, []);
 
   const handleHeroClick = (id) => {
@@ -92,6 +94,8 @@ function Genre({ onGenreSelect }) {
         let data;
         if (genreId === "kdrama") {
           data = await getMoviesKdrama();
+        } else if (genreId === "Bollywood") {
+          data = await getMoviesBollywood();
         } else {
           data = await getMoviesByGenre(genreId);
         }
@@ -140,6 +144,12 @@ function Genre({ onGenreSelect }) {
             onClick={() => handleGenreClick(null)}
           >
             Trending <FontAwesomeIcon icon={faFire} className="fire" />
+          </button>
+          <button
+            className={`genre-btn ${genreId === "Bollywood" ? "active" : ""}`}
+            onClick={() => handleGenreClick("Bollywood")}
+          >
+            BollyWood
           </button>
 
           <button
