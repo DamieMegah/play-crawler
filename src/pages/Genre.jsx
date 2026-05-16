@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { getGenres, getMoviesByGenre, getPopularMovies } from "../services/api";
+import {
+  getGenres,
+  getMoviesByGenre,
+  getPopularMovies,
+  getMoviesKdrama,
+} from "../services/api";
 import MovieCard from "../components/MovieCard";
 import Loading from "../components/Loading";
 import "../css/Genre.css";
@@ -14,7 +19,7 @@ function Genre({ onGenreSelect }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
-  const [setError, error] = useState(null);
+  const [error, setError] = useState(null);
 
   const isGenrePage = location.pathname.startsWith("/genre");
   const pageStyle = isGenrePage ? "genre-layout-active" : "genre-layout-home";
@@ -32,8 +37,9 @@ function Genre({ onGenreSelect }) {
     { id: 16, name: "Animation", image: "/animation.jpg" },
     { id: 12, name: "Adventure", image: "/adventure.jpg" },
     { id: 80, name: "Crime", image: "/crime.jpg" },
-    { id: 99, name: "Docu", image: "/docu.jpg" },
+    { id: 99, name: "Documentry", image: "/docu.jpg" },
     { id: 14, name: "Fantasy", image: "/fantasy.jpg" },
+    { id: "kdrama", name: "k-Drama", image: "/kdrama.png" },
   ];
 
   useEffect(() => {
@@ -45,6 +51,8 @@ function Genre({ onGenreSelect }) {
     navigate(`/genre/${id}`);
     if (onGenreSelect) onGenreSelect(id);
   };
+
+  //Save/Get genre from local storage
   useEffect(() => {
     const loadGenres = async () => {
       const cached = localStorage.getItem("genres");
@@ -61,7 +69,7 @@ function Genre({ onGenreSelect }) {
       }
     };
     loadGenres();
-  }, [setError]);
+  }, []);
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -81,9 +89,14 @@ function Genre({ onGenreSelect }) {
           return;
         }
 
-        const data = await getMoviesByGenre(genreId);
-        setLocalMovies(data);
+        let data;
+        if (genreId === "kdrama") {
+          data = await getMoviesKdrama();
+        } else {
+          data = await getMoviesByGenre(genreId);
+        }
 
+        setLocalMovies(data);
         localStorage.setItem(cacheKey, JSON.stringify(data));
       } finally {
         setLoading(false);
@@ -127,6 +140,13 @@ function Genre({ onGenreSelect }) {
             onClick={() => handleGenreClick(null)}
           >
             Trending <FontAwesomeIcon icon={faFire} className="fire" />
+          </button>
+
+          <button
+            className={`genre-btn ${genreId === "kdrama" ? "active" : ""}`}
+            onClick={() => handleGenreClick("kdrama")}
+          >
+            K-Drama
           </button>
           {genres.map((g) => (
             <button
