@@ -3,11 +3,13 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   getGenres,
   getMoviesByGenre,
-  getPopularMovies,
   getMoviesKdrama,
   getMoviesBollywood,
   getMoviesNollywood,
   getNetflixMovies,
+  getAnimeCollection,
+  getClassicMovies,
+  getDisneyMovies,
 } from "../services/api";
 import MovieCard from "../components/MovieCard";
 import Loading from "../components/Loading";
@@ -47,9 +49,31 @@ function Genre({ onGenreSelect }) {
     { id: 14, name: "Fantasy", image: "/fantasy.jpg" },
   ];
 
+  // 1. Helper dictionary for your custom built-in string-based routes
+  const customGenreNames = {
+    anime: "Anime",
+    bollywood: "Bollywood",
+    classic: "Classics",
+    disney: "Disney+",
+    kdrama: "K-Drama",
+    nollywood: "Nollywood",
+    netflix: "Netflix Originals",
+  };
+
+  const getSelectedGenreName = () => {
+    if (!genreId) return "Trending";
+
+    if (customGenreNames[genreId]) {
+      return customGenreNames[genreId];
+    }
+
+    const foundGenre = genres.find((g) => String(g.id) === String(genreId));
+    return foundGenre ? foundGenre.name : "Genre Collection";
+  };
+
   useEffect(() => {
     const shuffled = [...allHeroGenres].sort(() => 0.5 - Math.random());
-    setRandomGenres(shuffled.slice(0, 8));
+    setRandomGenres(shuffled.slice(0, 11));
   }, []);
 
   const handleHeroClick = (id) => {
@@ -103,6 +127,12 @@ function Genre({ onGenreSelect }) {
           data = await getMoviesNollywood();
         } else if (genreId === "netflix") {
           data = await getNetflixMovies();
+        } else if (genreId === "anime") {
+          data = await getAnimeCollection();
+        } else if (genreId === "classic") {
+          data = await getClassicMovies();
+        } else if (genreId === "disney") {
+          data = await getDisneyMovies();
         } else {
           data = await getMoviesByGenre(genreId);
         }
@@ -129,6 +159,16 @@ function Genre({ onGenreSelect }) {
     <div className={`genre-container ${pageStyle}`}>
       {isGenrePage && !genreId && (
         <div className="genre-hero-grid">
+          <div
+            key={"disney"}
+            className={`genre-hero-card ${genreId === "disney" ? "selected" : ""}`}
+            onClick={() => handleHeroClick("disney")}
+            style={{
+              backgroundImage: `linear-gradient(rgba(223, 222, 222, 0.13), rgba(0, 0, 0, 0.06)), url(/Disney_logo.svg)`,
+            }}
+          >
+            <h3>Disney +</h3>
+          </div>
           {randomGenres.map((hero) => (
             <div
               key={hero.id}
@@ -152,11 +192,30 @@ function Genre({ onGenreSelect }) {
           >
             Trending <FontAwesomeIcon icon={faFire} className="fire" />
           </button>
+
+          <button
+            className={`genre-btn ${genreId === "anime" ? "active" : ""}`}
+            onClick={() => handleGenreClick("anime")}
+          >
+            Anime
+          </button>
           <button
             className={`genre-btn ${genreId === "bollywood" ? "active" : ""}`}
             onClick={() => handleGenreClick("bollywood")}
           >
             Bollywood
+          </button>
+          <button
+            className={`genre-btn ${genreId === "classic" ? "active" : ""}`}
+            onClick={() => handleGenreClick("classic")}
+          >
+            Classics
+          </button>
+          <button
+            className={`genre-btn ${genreId === "disney" ? "active" : ""}`}
+            onClick={() => handleGenreClick("disney")}
+          >
+            Disney+
           </button>
           <button
             className={`genre-btn ${genreId === "kdrama" ? "active" : ""}`}
@@ -182,8 +241,10 @@ function Genre({ onGenreSelect }) {
         </div>
       </div>
 
+      {/* 3. Rendered Dynamic Heading & Content Output */}
       {genreId && (
         <div className="genre-results">
+          <h2 className="selected-genre-heading">{getSelectedGenreName()}</h2>
           {loading ? (
             <Loading />
           ) : (
