@@ -17,7 +17,7 @@ import "../css/Genre.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire } from "@fortawesome/free-solid-svg-icons";
 
-function Genre({ onGenreSelect }) {
+function Genre({ onGenreSelect, scrollMainToTop }) {
   const [genres, setGenres] = useState([]);
   const [localMovies, setLocalMovies] = useState([]);
   const { genreId } = useParams();
@@ -79,6 +79,7 @@ function Genre({ onGenreSelect }) {
   const handleHeroClick = (id) => {
     navigate(`/genre/${id}`);
     if (onGenreSelect) onGenreSelect(id);
+    scrollMainToTop?.();
   };
 
   //Save/Get genre from local storage
@@ -150,6 +151,7 @@ function Genre({ onGenreSelect }) {
   const handleGenreClick = (id) => {
     if (id) {
       navigate(`/genre/${id}`);
+      scrollMainToTop?.();
     } else {
       navigate("/");
     }

@@ -172,17 +172,47 @@
   .genre-hero-card:nth-child(odd) {
     transform: translateX(-20px);
     border-radius: 0px 12px 12px 0px;
+    animation: moves2 2.5s ease-in-out infinite;
   }
 
   .genre-hero-card:nth-child(even) {
     transform: translateX(20px);
     border-radius: 12px 0px 0px 12px;
+    animation: moves 2.5s ease-in-out infinite;
   }
 
   .genre-hero-card:hover {
     transform: translateX(0px) scale(1.02);
     border-radius: 16px;
     z-index: 5;
+  }
+
+  @keyframes moves {
+    0%{
+        transform: translateX(20px);
+    }
+    50% {
+      transform: translateX(16px);
+    }
+
+    100% {
+      transform: translateX(20px);
+    }
+    
+    
+  }
+
+  @keyframes moves2 {
+    0%{
+        transform: translateX(-20px);
+    }
+    50% {
+      transform: translateX(-16px);
+    }
+
+    100% {
+      transform: translateX(-20px);
+    }
   }
 
   .genre-layout-home {

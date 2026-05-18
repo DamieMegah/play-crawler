@@ -145,6 +145,18 @@
   transform: translateY(35px) scale(0.95);
   animation: gridItemsCascade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   animation-delay: var(--card-delay);
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #141414;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.4s ease;
+  aspect-ratio: 2 / 3;
+}
+
+.animated-card-holder.autoplay-active {
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(229, 9, 20, 0.4);
+  z-index: 10;
 }
 
 @keyframes gridItemsCascade {
@@ -156,6 +168,28 @@
 
 .animated-card-holder:hover {
   z-index: 10;
+}
+.inline-trailer-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  animation: videoFadeIn 0.5s ease-in forwards;
+}
+
+
+.inline-trailer-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none; /* Keeps native iframe overlay UI from messing up scrolling */
+}
+
+@keyframes videoFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (max-width: 768px) {

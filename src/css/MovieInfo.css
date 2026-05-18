@@ -271,6 +271,8 @@
   align-items: center;
   justify-content: center;
   gap: 1.4rem;
+  color: var(--text-main);
+  background-color: var(--text-main);
  
 }
 .error-message p{
@@ -281,9 +283,9 @@
    padding: 8px 18px;
    width: 6rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #1a1a1a;
+  background: var(--primary-color);
   color: var(--text-main);
-  border-radius: 20px;
+  border-radius: 4px;
   cursor: pointer;
   white-space: nowrap; 
   font-family: var(--font-body);
@@ -297,6 +299,7 @@
 
 .error-message .icon{
   font-size: 4rem;
+   color: var(--text-main);
 }
 
 .desktop-back{

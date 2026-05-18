@@ -96,6 +96,20 @@ function MovieInfo() {
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
+  //NaijaPrey
+  function handleNaijaPrey(movie) {
+    if (!movie) return;
+
+    const formattedTitle = movie.title
+      .replace(/[^\w\s-]/g, "")
+      .split(" ")
+      .join("-");
+    const year = movie.release_date ? movie.release_date.split("-")[0] : "2026";
+    const url = `https://www.naijaprey.tv/${formattedTitle}-${year}/`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   const backdropBase = "https://image.tmdb.org/t/p/original";
   const posterBase = "https://image.tmdb.org/t/p/w500";
 
@@ -198,6 +212,9 @@ function MovieInfo() {
                     </button>
                     <button onClick={() => handleNetNaija(movie)}>
                       NetNaija <sub>&nbsp;(Fairly recommended)</sub>
+                    </button>
+                    <button onClick={() => handleNaijaPrey(movie)}>
+                      NaijaPrey <sub>&nbsp;(Fairly recommended)</sub>
                     </button>
                   </div>
                 </div>

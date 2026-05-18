@@ -1,6 +1,6 @@
 import Home from "./pages/Home";
 import { Route, Routes } from "react-router-dom";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import "./css/App.css";
 import Favourite from "./pages/Favourites";
 import Genre from "./pages/Genre";
@@ -16,6 +16,12 @@ import Netflix from "./components/Netflix";
 function App() {
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef(null);
+
+  const scrollMainToTop = () => {
+    scrollRef.current?.scrollTo({
+      top: 0,
+    });
+  };
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -42,8 +48,14 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/favourite" element={<Favourite />} />
-          <Route path="/genre" element={<Genre />} />
-          <Route path="/genre/:genreId" element={<Home />} />
+          <Route
+            path="/genre"
+            element={<Genre scrollMainToTop={scrollMainToTop} />}
+          />
+          <Route
+            path="/genre/:genreId"
+            element={<Genre scrollMainToTop={scrollMainToTop} />}
+          />
           <Route path="/netflix" element={<Netflix />} />
           <Route path="/movie/:id" element={<MovieInfo />} />
           <Route path="/search" element={<SearchResults />} />
