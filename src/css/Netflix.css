@@ -207,6 +207,25 @@ transform-origin: top right;
   transform: scale(0.76);
 }
 
+
+
+.floating-movie-card:hover::after{
+  content: "Click For Info";
+  position: absolute;
+  top: 8rem;
+  right: 2rem;
+  background-color: var( --accent-danger);
+  color: var(--text-main);
+  padding: 2px 4px;
+  border-radius: 6px;
+  opacity: 0.7;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: 2.3s ease-in-out;
+}
+
+
+
 .floating-movie-card > *{
   width: 100%;
 }

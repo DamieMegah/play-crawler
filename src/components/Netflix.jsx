@@ -9,6 +9,7 @@ function Netflix() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeAutoplayId, setActiveAutoplayId] = useState(null);
+  const [hoveredMovieId, setHoveredMovieId] = useState(null);
   const timersRef = useRef({});
 
   useEffect(() => {
@@ -167,16 +168,32 @@ function Netflix() {
             {netflixMovies &&
               netflixMovies.map((movie, index) => {
                 const isAutoplayActive =
+                  String(hoveredMovieId) === String(movie.id) ||
                   String(activeAutoplayId) === String(movie.id);
                 // Standard default placeholder or fallback trailer URL
                 const trailerUrl = movie.trailerUrl;
 
                 return (
                   <div
-                    className={`animated-card-holder ${isAutoplayActive ? "autoplay-active" : ""}`}
-                    style={{ "--card-delay": `${index * 0.05}s` }}
+                    className={`animated-card-holder ${
+                      isAutoplayActive ? "autoplay-active" : ""
+                    }`}
+                    style={{
+                      "--card-delay": `${index * 0.05}s`,
+                    }}
                     key={movie.id}
                     data-movie-id={movie.id}
+                    onMouseEnter={() => {
+                      if (window.innerWidth > 768) {
+                        setHoveredMovieId(movie.id);
+                        setActiveAutoplayId(movie.id);
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      if (window.innerWidth > 768) {
+                        setHoveredMovieId(null);
+                      }
+                    }}
                   >
                     {/* Render MovieCard if not playing, or render the Video elements instead */}
                     {isAutoplayActive && trailerUrl ? (
