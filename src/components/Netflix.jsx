@@ -44,30 +44,79 @@ function Netflix() {
   useEffect(() => {
     if (loading || netflixMovies.length === 0) return;
 
+    const isMobile = window.innerWidth <= 768;
+
     const observerOptions = {
-      root: null, // viewport
-      threshold: 0.8, // 80% visibility required
+      root: null,
+      threshold: 0.8,
+    };
+
+    const visibleCards = new Set();
+
+    const startAutoplay = () => {
+      clearTimeout(timersRef.current.mainTimer);
+
+      timersRef.current.mainTimer = setTimeout(() => {
+        const cardsArray = Array.from(visibleCards);
+
+        if (cardsArray.length === 0) {
+          setActiveAutoplayId(null);
+          return;
+        }
+
+        if (isMobile) {
+          // MOBILE:
+          // choose centered visible card
+
+          let bestCard = null;
+          let closestDistance = Infinity;
+
+          cardsArray.forEach((card) => {
+            const rect = card.getBoundingClientRect();
+
+            const cardCenter = rect.top + rect.height / 2;
+
+            const viewportCenter = window.innerHeight / 2;
+
+            const distance = Math.abs(cardCenter - viewportCenter);
+
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              bestCard = card;
+            }
+          });
+
+          if (bestCard) {
+            setActiveAutoplayId(bestCard.getAttribute("data-movie-id"));
+          }
+        } else {
+          // DESKTOP:
+          // RANDOM visible card
+
+          const randomCard =
+            cardsArray[Math.floor(Math.random() * cardsArray.length)];
+
+          setActiveAutoplayId(randomCard.getAttribute("data-movie-id"));
+        }
+      }, 5000);
     };
 
     const observerCallback = (entries) => {
       entries.forEach((entry) => {
-        const movieId = entry.target.getAttribute("data-movie-id");
+        const el = entry.target;
 
         if (entry.isIntersecting) {
-          // If 80% visible, start a 5-second countdown timer
-          timersRef.current[movieId] = setTimeout(() => {
-            setActiveAutoplayId(movieId);
-          }, 5000); // 5 seconds
+          visibleCards.add(el);
         } else {
-          // If it drops below 80% visibility, clear its timer
-          if (timersRef.current[movieId]) {
-            clearTimeout(timersRef.current[movieId]);
-            delete timersRef.current[movieId];
-          }
-          // If this card was currently playing, stop it when scrolled away
-          setActiveAutoplayId((prevId) => (prevId === movieId ? null : prevId));
+          visibleCards.delete(el);
+
+          const movieId = el.getAttribute("data-movie-id");
+
+          setActiveAutoplayId((prev) => (prev === movieId ? null : prev));
         }
       });
+
+      startAutoplay();
     };
 
     const observer = new IntersectionObserver(
@@ -75,15 +124,14 @@ function Netflix() {
       observerOptions,
     );
 
-    // Grab all modern card holders to observe
     const cardElements = document.querySelectorAll(".animated-card-holder");
+
     cardElements.forEach((el) => observer.observe(el));
 
-    // Cleanup logic on unmount or data refresh
     return () => {
-      cardElements.forEach((el) => observer.unobserve(el));
-      // Clear any pending timers to avoid memory leaks
-      Object.values(timersRef.current).forEach(clearTimeout);
+      observer.disconnect();
+
+      clearTimeout(timersRef.current.mainTimer);
     };
   }, [loading, netflixMovies]);
 
@@ -134,11 +182,18 @@ function Netflix() {
                     {isAutoplayActive && trailerUrl ? (
                       <div className="inline-trailer-wrapper">
                         <iframe
-                          src={`${trailerUrl}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0`}
+                          src={`${trailerUrl}?autoplay=1&mute=0&controls=1&modestbranding=1&rel=0`}
                           title={movie.title || "Trailer"}
                           frameBorder="0"
-                          allow="autoplay; encrypted-media"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
                         />
+                        <div className="floating-movie-card">
+                          <MovieCard
+                            movie={movie}
+                            className="inner-moviecard"
+                          />
+                        </div>
                       </div>
                     ) : (
                       <MovieCard movie={movie} />

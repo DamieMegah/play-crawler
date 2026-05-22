@@ -1,11 +1,11 @@
 import "../css/InstallPWA.css";
-import inst01 from "../assets/inst01.jpg";
-import inst02 from "../assets/inst02.jpg";
+import inst01 from "../assets/inst01.Webp";
+import inst02 from "../assets/inst02.webp";
 import inst03 from "../assets/inst03.jpg";
-import inst04 from "../assets/inst04.jpg";
-import inst05 from "../assets/inst05.jpg";
-import inst06 from "../assets/inst06.jpg";
-import inst07 from "../assets/inst07.jpg";
+import inst04 from "../assets/inst04.webp";
+import inst05 from "../assets/inst05.webp";
+import inst06 from "../assets/inst06.webp";
+import inst07 from "../assets/inst07.webp";
 
 function InstallPWA() {
   const steps = [
