@@ -253,7 +253,7 @@
 
 .disclaimer-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 30px;
 }
 
@@ -289,6 +289,10 @@
 @media (max-width: 768px) {
   :root {
     --fs-hero: 3rem;
+  }
+
+  html{
+    font-size: 75%;
   }
   .about-container {
     padding: 40px 15px;
