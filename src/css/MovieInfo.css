@@ -94,6 +94,70 @@
      color: var(--text-main); 
     }
 
+    .watch-trailer-btn {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--accent-danger);
+  color: var(--text-main);
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s ease-in-out;
+}
+
+ .watch-trailer-btn:hover{
+  background: rgba(255, 0, 0, 0.774);
+  text-decoration: underline;
+   transform: translateY(-2px);
+ }
+
+
+
+.movie-trailer-player {
+  width: 60%;
+  border-radius: 4px;
+  overflow: hidden;
+  position: fixed;
+  right: 0;
+  top: 5rem;
+}
+
+.movie-trailer-player iframe {
+  width: 90%;
+  height: 500px;
+  border: none;
+  border-radius: 4px;
+}
+
+.close-trailer-btn{
+   position: absolute;
+   padding: 0.4rem 0.6rem;
+  border: none;
+  border-radius: 2px;
+  background: crimson;
+  color: var(--text-main);
+  font-weight: 200;
+  cursor: pointer;
+}
+
+.close-trailer-btn:hover{
+  background: rgba(201, 16, 16, 0.808);
+  text-decoration: underline;
+}
+
+.iframe-loading{
+   position: absolute;
+   top: 12rem;
+   right: 30rem;
+   padding: 0.8rem 1.3rem;
+  border: 1px solid black;
+  border-radius: 4px;
+  background: rgba(3, 3, 3, 0.699);
+  color: var(--text-main);
+  font-weight: 800;
+  pointer-events: none;
+}
+
 .btn-crawl { 
     background: var(--bg-card); 
     color: var(--text-main); 
@@ -323,6 +387,23 @@
 }
 .btns {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+.movie-trailer-player {
+  width: 100%;
+  border-radius: 4px;
+  right: 0;
+  top: 4.6rem;
+}
+
+.movie-trailer-player iframe {
+  width: 100%;
+  height: 84vh;
+}
+  .iframe-loading{
+   position: absolute;
+   top: 12rem;
+   right: 8rem;
   }
   
 }

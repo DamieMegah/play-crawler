@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMovieContext } from "../contexts/MovieContext";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,6 +15,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { faYoutube, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import "../css/MovieInfo.css";
+import { getMovieTrailer } from "../services/api";
 
 function MovieInfo() {
   const location = useLocation();
@@ -30,6 +31,10 @@ function MovieInfo() {
     removeFromFavourites,
   } = useMovieContext();
   const [showCrawler, setShowCrawler] = useState(false);
+  const [trailerKey, setTrailerKey] = useState(null);
+  const [showTrailer, setShowTrailer] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(true);
+  const [hasTrailer, setHasTrailer] = useState(true);
   const movieId = Number(id);
 
   const movie =
@@ -58,6 +63,43 @@ function MovieInfo() {
     if (favourite) removeFromFavourites(movie.id);
     else addToFavourites(movie);
   }
+
+  function handleTrailer(movie) {
+    if (!movie) return;
+
+    const cleanTitle = movie.title.replace(/[^\w\s]/gi, "");
+    const year = movie.release_date ? movie.release_date.split("-")[0] : "";
+
+    const query = encodeURIComponent(`${cleanTitle} ${year} official trailer`);
+
+    setTrailerKey(
+      `https://www.youtube.com/embed?listType=search&list=${query}`,
+    );
+  }
+  useEffect(() => {
+    async function fetchTrailer() {
+      if (!movie) return;
+
+      if (movie.trailerUrl) {
+        setTrailerKey(movie.trailerUrl);
+        setHasTrailer(true);
+        return;
+      }
+
+      const officialTrailerUrl = await getMovieTrailer(movie.id);
+
+      if (!officialTrailerUrl) {
+        setHasTrailer(false);
+        setTrailerKey(null);
+        return;
+      }
+
+      setTrailerKey(officialTrailerUrl);
+      setHasTrailer(true);
+    }
+
+    fetchTrailer();
+  }, [movie]);
 
   //Youtube crawl Logic
   function handleYoutube(movie) {
@@ -108,6 +150,7 @@ function MovieInfo() {
     const url = `https://www.naijaprey.tv/${formattedTitle}-${year}/`;
 
     window.open(url, "_blank", "noopener,noreferrer");
+    console.log(url);
   }
 
   const backdropBase = "https://image.tmdb.org/t/p/original";
@@ -144,7 +187,25 @@ function MovieInfo() {
               </span>
             </div>
 
-            <p className="overview-text">{movie.overview}</p>
+            <p className="overview-text">
+              {movie.overview}{" "}
+              <button
+                className="watch-trailer-btn"
+                style={{
+                  display: hasTrailer ? "block" : "none",
+                }}
+                onClick={() => setShowTrailer(!showTrailer)}
+              >
+                {showTrailer ? (
+                  "Hide Trailer"
+                ) : (
+                  <>
+                    Watch Trailer &nbsp;
+                    <FontAwesomeIcon icon={faYoutube} className="youtube" />
+                  </>
+                )}
+              </button>
+            </p>
 
             <div className="action-buttons">
               <button
@@ -175,6 +236,33 @@ function MovieInfo() {
           </div>
         </div>
 
+        {showTrailer && trailerKey && (
+          <div className="movie-trailer-player">
+            {iframeLoading ? (
+              <div className="iframe-loading">Please wait...</div>
+            ) : (
+              <button
+                className="close-trailer-btn"
+                onClick={() => {
+                  setShowTrailer(false);
+                  setIframeLoading(true); // Reset to true for the next movie trailer click
+                }}
+              >
+                {" "}
+                Close Trailer
+              </button>
+            )}
+
+            <iframe
+              src={`${trailerKey}?autoplay=1&controls=1&rel=0`}
+              title={`${movie.title} Trailer`}
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              onLoad={() => setIframeLoading(false)}
+            />
+          </div>
+        )}
         {showCrawler && (
           <div className="crawl-drawer">
             <h3>Select Source to Crawl</h3>
