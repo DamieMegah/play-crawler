@@ -17,6 +17,34 @@ import "../css/Genre.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFire } from "@fortawesome/free-solid-svg-icons";
 
+// FIX: Safe localStorage helper — guards against the value being the literal
+// string "undefined" (written when JSON.stringify receives undefined) or any
+// other corrupt value. Returns null on any problem so the caller re-fetches.
+function safeGetItem(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw || raw === "undefined" || raw === "null") {
+      localStorage.removeItem(key); // evict the bad entry
+      return null;
+    }
+    return JSON.parse(raw);
+  } catch {
+    localStorage.removeItem(key); // evict unparseable entry
+    return null;
+  }
+}
+
+// FIX: Safe localStorage writer — only stores when value is a non-null array
+// or object, so we never write "undefined" into the cache again.
+function safeSetItem(key, value) {
+  try {
+    if (value == null) return;
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // storage quota or private-mode write failure — silently ignore
+  }
+}
+
 function Genre({ onGenreSelect, scrollMainToTop }) {
   const [genres, setGenres] = useState([]);
   const [localMovies, setLocalMovies] = useState([]);
@@ -49,7 +77,6 @@ function Genre({ onGenreSelect, scrollMainToTop }) {
     { id: 14, name: "Fantasy", image: "/fantasy.jpg" },
   ];
 
-  // 1. Helper dictionary for your custom built-in string-based routes
   const customGenreNames = {
     anime: "Anime",
     bollywood: "Bollywood",
@@ -62,13 +89,9 @@ function Genre({ onGenreSelect, scrollMainToTop }) {
 
   const getSelectedGenreName = () => {
     if (!genreId) return "Trending";
-
-    if (customGenreNames[genreId]) {
-      return customGenreNames[genreId];
-    }
-
-    const foundGenre = genres.find((g) => String(g.id) === String(genreId));
-    return foundGenre ? foundGenre.name : "Genre Collection";
+    if (customGenreNames[genreId]) return customGenreNames[genreId];
+    const found = genres.find((g) => String(g.id) === String(genreId));
+    return found ? found.name : "Genre Collection";
   };
 
   useEffect(() => {
@@ -78,23 +101,26 @@ function Genre({ onGenreSelect, scrollMainToTop }) {
 
   const handleHeroClick = (id) => {
     navigate(`/genre/${id}`);
-    if (onGenreSelect) onGenreSelect(id);
+    onGenreSelect?.(id);
     scrollMainToTop?.();
   };
 
-  //Save/Get genre from local storage
+  // Load genres — uses safe helpers so a corrupt cache never crashes the app
   useEffect(() => {
     const loadGenres = async () => {
-      const cached = localStorage.getItem("genres");
+      const cached = safeGetItem("genres");
       if (cached) {
-        setGenres(JSON.parse(cached));
+        setGenres(cached);
         return;
       }
       try {
         const data = await getGenres();
-        setGenres(data);
-        localStorage.setItem("genres", JSON.stringify(data));
-      } catch (err) {
+        // Only cache if we actually got an array back
+        if (Array.isArray(data)) {
+          setGenres(data);
+          safeSetItem("genres", data);
+        }
+      } catch {
         setError("Failed to load genres");
       }
     };
@@ -109,37 +135,32 @@ function Genre({ onGenreSelect, scrollMainToTop }) {
       }
 
       setLoading(true);
+      setError(null);
 
       try {
         const cacheKey = `movies_${genreId}`;
-        const cachedData = localStorage.getItem(cacheKey);
-
-        if (cachedData) {
-          setLocalMovies(JSON.parse(cachedData));
+        const cached = safeGetItem(cacheKey);
+        if (cached) {
+          setLocalMovies(cached);
           return;
         }
 
         let data;
-        if (genreId === "kdrama") {
-          data = await getMoviesKdrama();
-        } else if (genreId === "bollywood") {
-          data = await getMoviesBollywood();
-        } else if (genreId === "nollywood") {
-          data = await getMoviesNollywood();
-        } else if (genreId === "netflix") {
-          data = await getNetflixMovies();
-        } else if (genreId === "anime") {
-          data = await getAnimeCollection();
-        } else if (genreId === "classic") {
-          data = await getClassicMovies();
-        } else if (genreId === "disney") {
-          data = await getDisneyMovies();
-        } else {
-          data = await getMoviesByGenre(genreId);
-        }
+        if (genreId === "kdrama") data = await getMoviesKdrama();
+        else if (genreId === "bollywood") data = await getMoviesBollywood();
+        else if (genreId === "nollywood") data = await getMoviesNollywood();
+        else if (genreId === "netflix") data = await getNetflixMovies();
+        else if (genreId === "anime") data = await getAnimeCollection();
+        else if (genreId === "classic") data = await getClassicMovies();
+        else if (genreId === "disney") data = await getDisneyMovies();
+        else data = await getMoviesByGenre(genreId);
 
-        setLocalMovies(data);
-        localStorage.setItem(cacheKey, JSON.stringify(data));
+        if (Array.isArray(data)) {
+          setLocalMovies(data);
+          safeSetItem(cacheKey, data);
+        }
+      } catch {
+        setError("Failed to load movies");
       } finally {
         setLoading(false);
       }
@@ -162,11 +183,11 @@ function Genre({ onGenreSelect, scrollMainToTop }) {
       {isGenrePage && !genreId && (
         <div className="genre-hero-grid">
           <div
-            key={"disney"}
+            key="disney"
             className={`genre-hero-card ${genreId === "disney" ? "selected" : ""}`}
             onClick={() => handleHeroClick("disney")}
             style={{
-              backgroundImage: `linear-gradient(rgba(223, 222, 222, 0.13), rgba(0, 0, 0, 0.06)), url(/Disney_logo.svg)`,
+              backgroundImage: `linear-gradient(rgba(223,222,222,0.13), rgba(0,0,0,0.06)), url(/Disney_logo.svg)`,
             }}
           >
             <h3>Disney +</h3>
@@ -194,7 +215,6 @@ function Genre({ onGenreSelect, scrollMainToTop }) {
           >
             Trending <FontAwesomeIcon icon={faFire} className="fire" />
           </button>
-
           <button
             className={`genre-btn ${genreId === "anime" ? "active" : ""}`}
             onClick={() => handleGenreClick("anime")}
@@ -243,11 +263,12 @@ function Genre({ onGenreSelect, scrollMainToTop }) {
         </div>
       </div>
 
-      {/* 3. Rendered Dynamic Heading & Content Output */}
       {genreId && (
         <div className="genre-results">
           <h2 className="selected-genre-heading">{getSelectedGenreName()}</h2>
-          {loading ? (
+          {error ? (
+            <p style={{ color: "red", padding: "1rem" }}>{error}</p>
+          ) : loading ? (
             <Loading />
           ) : (
             <div className="movie-grid">

@@ -249,7 +249,7 @@ function MovieInfo() {
                 }}
               >
                 {" "}
-                Exit Trailer
+                &times;close
               </button>
             )}
 

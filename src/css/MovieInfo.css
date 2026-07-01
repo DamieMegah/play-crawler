@@ -134,9 +134,10 @@
    padding: 0.4rem 0.6rem;
   border: none;
   border-radius: 2px;
-  background: crimson;
+  background: var(--accent-danger);
   color: var(--text-main);
   cursor: pointer;
+  font-weight: bold;
 }
 
 .close-trailer-btn:hover{
