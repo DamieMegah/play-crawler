@@ -1423,15 +1423,6 @@ export default function VideoPlayer() {
           </div>
         ) : playlist.length === 0 ? (
           <div style={S.empty}>
-            <FolderPicker style={S.openBtn}>
-              <FontAwesomeIcon icon={faFolder} />
-              <span style={{ marginLeft: 10 }}>Open Folder</span>
-            </FolderPicker>
-            <p style={S.emptyHint}>
-              {supportsFSAccess
-                ? "This folder will be remembered next time."
-                : "Select a folder containing video files"}
-            </p>
             <button
               type="button"
               style={{
@@ -1451,6 +1442,15 @@ export default function VideoPlayer() {
               hidden
               onChange={loadSingleVideo}
             />
+            <FolderPicker style={S.openBtn}>
+              <FontAwesomeIcon icon={faFolder} />
+              <span style={{ marginLeft: 10 }}>Open Folder</span>
+            </FolderPicker>
+            <p style={S.emptyHint}>
+              {supportsFSAccess
+                ? "This folder will be remembered next time."
+                : "Select a folder containing video files"}
+            </p>
           </div>
         ) : (
           <div
