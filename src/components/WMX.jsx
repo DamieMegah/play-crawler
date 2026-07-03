@@ -40,6 +40,7 @@ import {
   faWhatsapp,
   faTiktok,
 } from "@fortawesome/free-brands-svg-icons";
+import "../css/WMX.css";
 
 const AUTO_HIDE_DELAY = 3000;
 const DB_NAME = "video-player-db";
@@ -48,9 +49,6 @@ const DB_KEY = "lastFolder";
 const CLIP_SECONDS = 30;
 const CHUNK_MS = 1000;
 const WATERMARK_SAFE_TIMEOUT = 120_000; // 2 minutes max for watermark encoding
-
-const NAVBAR_H = 60;
-const BOTTOMBAR_H = 56;
 
 const supportsFSAccess =
   typeof window !== "undefined" && "showDirectoryPicker" in window;
@@ -159,7 +157,6 @@ export default function VideoPlayer() {
 
   const winW = useWindowWidth();
   const isMobile = winW < 640;
-  const isTablet = winW >= 640 && winW < 1024;
 
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [playing, setPlaying] = useState(false);
@@ -777,8 +774,7 @@ export default function VideoPlayer() {
     return new Promise((resolve, reject) => {
       // Regular <canvas>, not OffscreenCanvas (Android support)
       const canvas = document.createElement("canvas");
-      canvas.style.cssText =
-        "position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;";
+      canvas.className = "vp-offscreen-canvas";
       document.body.appendChild(canvas);
       const ctx = canvas.getContext("2d");
 
@@ -1155,13 +1151,13 @@ export default function VideoPlayer() {
     a.click();
   };
 
-  const FolderPicker = ({ children, style }) =>
+  const FolderPicker = ({ children, className }) =>
     openFolder ? (
-      <button style={style} onClick={openFolder} type="button">
+      <button className={className} onClick={openFolder} type="button">
         {children}
       </button>
     ) : (
-      <label style={style}>
+      <label className={className}>
         {children}
         <input
           type="file"
@@ -1175,123 +1171,66 @@ export default function VideoPlayer() {
       </label>
     );
 
-  const btnSize = isMobile ? 44 : 36;
-  const ctrlFontSize = isMobile ? 20 : 18;
-  const playBigSize = isMobile ? 64 : 72;
   const playlistVisible = showPlaylist && playlist.length > 0;
 
-  const sidebarStyle = isMobile
-    ? {
-        ...S.sidebar,
-        position: "fixed",
-        bottom: BOTTOMBAR_H,
-        left: 0,
-        right: 0,
-        width: "100%",
-        height: playlistVisible ? "52vh" : 0,
-        borderLeft: "none",
-        borderTop: "1px solid rgba(255,255,255,0.1)",
-        borderRadius: "16px 16px 0 0",
-        transition: "height 0.35s cubic-bezier(0.25, 1, 0.5, 1)",
-        zIndex: 20,
-        overflow: "hidden",
-      }
-    : {
-        ...S.sidebar,
-        width: isTablet ? 260 : 320,
-        ...(playlistVisible
-          ? {}
-          : {
-              marginRight: isTablet ? -260 : -320,
-              opacity: 0,
-              pointerEvents: "none",
-            }),
-      };
-
   const ConverterModal = () => (
-    <div style={S.modalBackdrop} onClick={() => setShowConverter(false)}>
-      <div style={S.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={S.modalHead}>
-          <FontAwesomeIcon
-            icon={faFileAudio}
-            style={{ color: "var(--primary-color, #3390ec)", marginRight: 10 }}
-          />
-          <span style={S.modalTitle}>Video to Audio (WAV)</span>
-          <button style={S.modalClose} onClick={() => setShowConverter(false)}>
+    <div className="vp-modal-backdrop" onClick={() => setShowConverter(false)}>
+      <div className="vp-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="vp-modal-head">
+          <FontAwesomeIcon icon={faFileAudio} className="vp-modal-head-icon" />
+          <span className="vp-modal-title">Video to Audio (WAV)</span>
+          <button
+            className="vp-modal-close"
+            onClick={() => setShowConverter(false)}
+          >
             <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
-        <div style={S.modalBody}>
-          <div style={S.converterInfo}>
-            <FontAwesomeIcon
-              icon={faFilm}
-              style={{ color: "rgba(255,255,255,0.4)", marginRight: 8 }}
-            />
-            <span
-              style={{
-                color: "rgba(255,255,255,0.7)",
-                fontSize: 13,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
+        <div className="vp-modal-body">
+          <div className="vp-converter-info">
+            <FontAwesomeIcon icon={faFilm} className="vp-converter-info-icon" />
+            <span className="vp-converter-info-title">
               {currentEntry?.title}
             </span>
           </div>
           {convertStatus !== "idle" && (
-            <div style={S.converterProgress}>
-              <div style={S.converterBar}>
+            <div className="vp-converter-progress">
+              <div className="vp-converter-bar">
                 <div
-                  style={{
-                    ...S.converterFill,
-                    width: `${convertProgress}%`,
-                    background:
-                      convertStatus === "error"
-                        ? "#ef4444"
-                        : convertStatus === "done"
-                          ? "#22c55e"
-                          : "var(--primary-color, #3390ec)",
-                  }}
+                  className={`vp-converter-fill ${
+                    convertStatus === "error"
+                      ? "status-error"
+                      : convertStatus === "done"
+                        ? "status-done"
+                        : ""
+                  }`}
+                  style={{ "--vp-convert-progress": `${convertProgress}%` }}
                 />
               </div>
               <span
-                style={{
-                  ...S.converterLabel,
-                  color:
-                    convertStatus === "error"
-                      ? "#ef4444"
-                      : convertStatus === "done"
-                        ? "#22c55e"
-                        : "rgba(255,255,255,0.6)",
-                }}
+                className={`vp-converter-label ${
+                  convertStatus === "error"
+                    ? "status-error"
+                    : convertStatus === "done"
+                      ? "status-done"
+                      : ""
+                }`}
               >
                 {convertStatus === "decoding" && (
                   <>
-                    <FontAwesomeIcon
-                      icon={faSpinner}
-                      spin
-                      style={{ marginRight: 6 }}
-                    />
+                    <FontAwesomeIcon icon={faSpinner} spin />
                     Decoding audio…
                   </>
                 )}
                 {convertStatus === "encoding" && (
                   <>
-                    <FontAwesomeIcon
-                      icon={faSpinner}
-                      spin
-                      style={{ marginRight: 6 }}
-                    />
+                    <FontAwesomeIcon icon={faSpinner} spin />
                     Encoding WAV…
                   </>
                 )}
                 {convertStatus === "done" && (
                   <>
-                    <FontAwesomeIcon
-                      icon={faCheck}
-                      style={{ marginRight: 6 }}
-                    />
+                    <FontAwesomeIcon icon={faCheck} />
                     Done! Ready to download.
                   </>
                 )}
@@ -1300,64 +1239,45 @@ export default function VideoPlayer() {
               </span>
             </div>
           )}
-          <p style={S.converterNote}>
+          <p className="vp-converter-note">
             Audio is extracted entirely in your browser — no upload, no server.
             The output is a standard WAV file that plays in any music or video
             app.
           </p>
-          <div style={S.converterActions}>
+          <div className="vp-converter-actions">
             {convertStatus === "idle" || convertStatus === "error" ? (
-              <button style={S.converterBtn} onClick={convertToAudio}>
-                <FontAwesomeIcon icon={faMusic} style={{ marginRight: 8 }} />
+              <button className="vp-converter-btn" onClick={convertToAudio}>
+                <FontAwesomeIcon icon={faMusic} />
                 Extract Audio
               </button>
             ) : convertStatus === "done" ? (
               <>
-                <button style={S.converterBtn} onClick={downloadAudio}>
-                  <FontAwesomeIcon
-                    icon={faDownload}
-                    style={{ marginRight: 8 }}
-                  />
+                <button className="vp-converter-btn" onClick={downloadAudio}>
+                  <FontAwesomeIcon icon={faDownload} />
                   Download Audio
                 </button>
                 <button
-                  style={{
-                    ...S.converterBtn,
-                    background: "rgba(255,255,255,0.08)",
-                  }}
+                  className="vp-converter-btn vp-converter-btn--secondary"
                   onClick={convertToAudio}
                 >
-                  <FontAwesomeIcon icon={faRepeat} style={{ marginRight: 8 }} />
+                  <FontAwesomeIcon icon={faRepeat} />
                   Re-convert
                 </button>
               </>
             ) : (
               <button
-                style={{
-                  ...S.converterBtn,
-                  opacity: 0.5,
-                  cursor: "not-allowed",
-                }}
+                className="vp-converter-btn vp-converter-btn--disabled"
                 disabled
               >
-                <FontAwesomeIcon
-                  icon={faSpinner}
-                  spin
-                  style={{ marginRight: 8 }}
-                />
+                <FontAwesomeIcon icon={faSpinner} spin />
                 Converting…
               </button>
             )}
             <button
-              style={{
-                ...S.converterBtn,
-                background: "transparent",
-                border: "1px solid rgba(255,255,255,0.12)",
-                color: "rgba(255,255,255,0.5)",
-              }}
+              className="vp-converter-btn vp-converter-btn--ghost"
               onClick={() => setShowConverter(false)}
             >
-              <FontAwesomeIcon icon={faXmark} style={{ marginRight: 8 }} />
+              <FontAwesomeIcon icon={faXmark} />
               Close
             </button>
           </div>
@@ -1367,84 +1287,55 @@ export default function VideoPlayer() {
   );
 
   return (
-    <div style={{ ...S.root, flexDirection: isMobile ? "column" : "row" }}>
-      <canvas ref={canvasRef} style={{ display: "none" }} />
+    <div className="vp-root">
+      <canvas ref={canvasRef} className="vp-hidden-canvas" />
       {showConverter && <ConverterModal />}
 
-      <div style={S.main}>
+      <div className="vp-main">
         {restoring ? (
-          <div style={S.empty}>
+          <div className="vp-empty">
             <FontAwesomeIcon icon={faSpinner} spin size="2x" color="#fff" />
-            <p style={S.emptyHint}>
+            <p className="vp-empty-hint">
               Reconnecting to "{folderName || "last folder"}"…
             </p>
             <button
-              style={S.cancelRestoreBtn}
+              className="vp-cancel-restore-btn"
               onClick={cancelRestore}
               type="button"
             >
-              <FontAwesomeIcon icon={faXmark} style={{ marginRight: 8 }} />
+              <FontAwesomeIcon icon={faXmark} />
               Select New Folder Instead
             </button>
-            <p
-              style={{
-                ...S.emptyHint,
-                fontSize: 11,
-                marginTop: -8,
-                marginBottom: 0,
-                marginLeft: 0,
-                marginRight: 0,
-              }}
-            >
+            <p className="vp-empty-hint vp-empty-hint--small">
               Cancels the reconnect and clears the saved folder.
             </p>
           </div>
         ) : needsReconnect ? (
-          <div style={S.empty}>
-            <button style={S.openBtn} onClick={reconnectFolder} type="button">
+          <div className="vp-empty">
+            <button
+              className="vp-open-btn"
+              onClick={reconnectFolder}
+              type="button"
+            >
               <FontAwesomeIcon icon={faFolder} />
-              <span
-                style={{
-                  marginLeft: 10,
-                  marginBottom: 0,
-                  marginTop: 0,
-                  marginRight: 0,
-                }}
-              >
-                Reconnect to "{folderName}"
-              </span>
+              <span>Reconnect to "{folderName}"</span>
             </button>
-            <p style={S.emptyHint}>
+            <p className="vp-empty-hint">
               Your browser needs permission to access this folder again.
             </p>
-            <FolderPicker style={S.linkBtn}>
+            <FolderPicker className="vp-link-btn">
               Or pick a different folder
             </FolderPicker>
           </div>
         ) : playlist.length === 0 ? (
-          <div style={S.empty}>
+          <div className="vp-empty">
             <button
               type="button"
-              style={{
-                ...S.openBtn,
-                marginTop: 12,
-                marginBottom: 0,
-                marginLeft: 0,
-                marginRight: 0,
-              }}
+              className="vp-open-btn vp-open-btn--top-margin"
               onClick={() => videoInput.current?.click()}
             >
               <FontAwesomeIcon icon={faFilm} />
-              <span
-                style={{
-                  marginLeft: 10,
-                  marginBottom: 0,
-                  marginTopt: 0,
-                  marginRight: 0,
-                }}
-              >
-                Select A Video
-              </span>
+              <span>Select A Video</span>
             </button>
 
             <input
@@ -1454,20 +1345,11 @@ export default function VideoPlayer() {
               hidden
               onChange={loadSingleVideo}
             />
-            <FolderPicker style={S.openBtn}>
+            <FolderPicker className="vp-open-btn">
               <FontAwesomeIcon icon={faFolder} />
-              <span
-                style={{
-                  marginLeft: 10,
-                  marginBottom: 0,
-                  marginLeft: 0,
-                  marginRight: 0,
-                }}
-              >
-                Open Folder
-              </span>
+              <span>Open Folder</span>
             </FolderPicker>
-            <p style={S.emptyHint}>
+            <p className="vp-empty-hint">
               {supportsFSAccess
                 ? "This folder will be remembered next time."
                 : "Select a folder containing video files"}
@@ -1476,14 +1358,15 @@ export default function VideoPlayer() {
         ) : (
           <div
             ref={playerRef}
-            style={{ ...S.player, cursor: showControls ? "default" : "none" }}
+            className={`vp-player ${showControls ? "controls-visible" : "controls-hidden"}`}
             onMouseMove={!isMobile ? revealControls : undefined}
             onMouseLeave={() => !isMobile && playing && hideControls()}
             onClick={handleVideoTap}
           >
             <video
               ref={videoRef}
-              style={{ ...S.video, transform: `rotate(${rotation}deg)` }}
+              className="vp-video"
+              style={{ "--vp-rotation": `${rotation}deg` }}
               preload="metadata"
               crossOrigin="anonymous"
               playsInline
@@ -1500,18 +1383,13 @@ export default function VideoPlayer() {
             </video>
 
             {loading && (
-              <div style={S.spinnerWrap}>
+              <div className="vp-spinner-wrap">
                 <FontAwesomeIcon icon={faSpinner} spin size="2x" color="#fff" />
               </div>
             )}
 
             <button
-              style={{
-                ...S.playlistToggle,
-                opacity: showControls ? 1 : 0,
-                width: btnSize,
-                height: btnSize,
-              }}
+              className={`vp-playlist-toggle ${showControls ? "visible" : ""}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowPlaylist((v) => !v);
@@ -1522,56 +1400,25 @@ export default function VideoPlayer() {
             </button>
 
             <div
-              style={{ ...S.overlay, opacity: showControls ? 1 : 0 }}
+              className={`vp-overlay ${showControls ? "visible" : ""}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <div
-                style={{
-                  ...S.titleBar,
-                  padding: isMobile
-                    ? "12px 62px 12px 14px"
-                    : "20px 70px 20px 24px",
-                }}
-              >
-                <span style={{ ...S.titleText, fontSize: isMobile ? 13 : 15 }}>
+              <div className="vp-title-bar">
+                <span className="vp-title-text">
                   {currentEntry?.title ?? ""}
                 </span>
-                <FolderPicker
-                  style={{ ...S.smallBtn, width: btnSize, height: btnSize }}
-                >
+                <FolderPicker className="vp-small-btn">
                   <FontAwesomeIcon icon={faFolder} />
                 </FolderPicker>
               </div>
 
-              <div style={{ ...S.centerRow, gap: isMobile ? 20 : 32 }}>
-                <button
-                  style={{
-                    ...S.iconBtn,
-                    fontSize: isMobile ? 13 : 15,
-                    padding: isMobile ? "8px 12px" : "10px 16px",
-                  }}
-                  onClick={() => skip(-10)}
-                >
+              <div className="vp-center-row">
+                <button className="vp-icon-btn" onClick={() => skip(-10)}>
                   <FontAwesomeIcon icon={faRotateLeft} />
-                  <span
-                    style={{
-                      marginLeft: 4,
-                      marginBottom: 0,
-                      marginTop: 0,
-                      marginRight: 0,
-                      fontSize: isMobile ? 11 : 13,
-                    }}
-                  >
-                    10
-                  </span>
+                  <span className="vp-icon-btn__label">10</span>
                 </button>
                 <button
-                  style={{
-                    ...S.playBig,
-                    width: playBigSize,
-                    height: playBigSize,
-                    fontSize: isMobile ? 22 : 26,
-                  }}
+                  className="vp-play-big"
                   onClick={(e) => {
                     e.stopPropagation();
                     playPause();
@@ -1579,52 +1426,25 @@ export default function VideoPlayer() {
                 >
                   <FontAwesomeIcon icon={playing ? faPause : faPlay} />
                 </button>
-                <button
-                  style={{
-                    ...S.iconBtn,
-                    fontSize: isMobile ? 13 : 15,
-                    padding: isMobile ? "8px 12px" : "10px 16px",
-                  }}
-                  onClick={() => skip(10)}
-                >
-                  <span
-                    style={{
-                      marginRight: 4,
-                      marginBottom: 0,
-                      marginLeft: 0,
-                      marginTop: 0,
-                      fontSize: isMobile ? 11 : 13,
-                    }}
-                  >
-                    10
-                  </span>
+                <button className="vp-icon-btn" onClick={() => skip(10)}>
+                  <span className="vp-icon-btn__label">10</span>
                   <FontAwesomeIcon icon={faRotateRight} />
                 </button>
               </div>
 
-              <div
-                style={{ padding: isMobile ? "0 12px 12px" : "0 24px 24px" }}
-              >
-                <div
-                  style={{
-                    ...S.progressWrap,
-                    height: isMobile ? 20 : 16,
-                    marginBottom: isMobile ? 8 : 10,
-                  }}
-                >
-                  <div style={{ ...S.track, height: isMobile ? 5 : 4 }}>
+              <div className="vp-overlay-bottom">
+                <div className="vp-progress-wrap">
+                  <div className="vp-track">
                     <div
+                      className="vp-track-fill vp-track-fill--buffered"
                       style={{
-                        ...S.trackFill,
-                        width: `${pct(buffered, duration)}%`,
-                        background: "rgba(255,255,255,0.3)",
+                        "--vp-buffered-pct": `${pct(buffered, duration)}%`,
                       }}
                     />
                     <div
+                      className="vp-track-fill vp-track-fill--played"
                       style={{
-                        ...S.trackFill,
-                        width: `${pct(currentTime, duration)}%`,
-                        background: "#e50914",
+                        "--vp-played-pct": `${pct(currentTime, duration)}%`,
                       }}
                     />
                   </div>
@@ -1634,20 +1454,15 @@ export default function VideoPlayer() {
                     max="100"
                     step="0.1"
                     value={pct(currentTime, duration)}
-                    style={S.rangeOverlay}
+                    className="vp-range-overlay"
                     onChange={(e) => seek(Number(e.target.value) / 100)}
                   />
                 </div>
 
-                <div style={{ ...S.ctrlRow, gap: isMobile ? 2 : 6 }}>
-                  <div style={{ ...S.ctrlLeft, gap: isMobile ? 4 : 8 }}>
+                <div className="vp-ctrl-row">
+                  <div className="vp-ctrl-left">
                     <button
-                      style={{
-                        ...S.ctrlBtn,
-                        fontSize: ctrlFontSize,
-                        width: btnSize,
-                        height: btnSize,
-                      }}
+                      className="vp-ctrl-btn"
                       onClick={(e) => {
                         e.stopPropagation();
                         playPause();
@@ -1655,37 +1470,13 @@ export default function VideoPlayer() {
                     >
                       <FontAwesomeIcon icon={playing ? faPause : faPlay} />
                     </button>
-                    <button
-                      style={{
-                        ...S.ctrlBtn,
-                        fontSize: ctrlFontSize,
-                        width: btnSize,
-                        height: btnSize,
-                      }}
-                      onClick={goPrev}
-                    >
+                    <button className="vp-ctrl-btn" onClick={goPrev}>
                       <FontAwesomeIcon icon={faBackwardStep} />
                     </button>
-                    <button
-                      style={{
-                        ...S.ctrlBtn,
-                        fontSize: ctrlFontSize,
-                        width: btnSize,
-                        height: btnSize,
-                      }}
-                      onClick={goNext}
-                    >
+                    <button className="vp-ctrl-btn" onClick={goNext}>
                       <FontAwesomeIcon icon={faForwardStep} />
                     </button>
-                    <button
-                      style={{
-                        ...S.ctrlBtn,
-                        fontSize: ctrlFontSize,
-                        width: btnSize,
-                        height: btnSize,
-                      }}
-                      onClick={toggleMute}
-                    >
+                    <button className="vp-ctrl-btn" onClick={toggleMute}>
                       <FontAwesomeIcon
                         icon={
                           muted || volume === 0
@@ -1703,198 +1494,121 @@ export default function VideoPlayer() {
                         max="1"
                         step="0.02"
                         value={muted ? 0 : volume}
-                        style={{
-                          width: 70,
-                          accentColor: "#fff",
-                          cursor: "pointer",
-                        }}
+                        className="vp-volume-range"
                         onChange={(e) => handleVolume(Number(e.target.value))}
                       />
                     )}
-                    <span
-                      style={{ ...S.timeText, fontSize: isMobile ? 10 : 12 }}
-                    >
+                    <span className="vp-time-text">
                       {fmt(currentTime)} / {fmt(duration)}
                     </span>
                   </div>
 
-                  <div
-                    className={second - icon}
-                    style={{ ...S.ctrlRight, gap: isMobile ? 2 : 6 }}
-                  >
-                    <div style={{ position: "relative" }}>
+                  <div className="vp-ctrl-right">
+                    <div className="vp-dropdown-wrap">
                       <button
-                        style={{
-                          ...S.ctrlBtn,
-                          fontSize: ctrlFontSize,
-                          width: btnSize,
-                          height: btnSize,
-                        }}
+                        className="vp-ctrl-btn"
                         onClick={takeScreenshot}
                         title="Screenshot"
                       >
                         <FontAwesomeIcon icon={faCamera} />
                       </button>
                       {shotUrl && (
-                        <div style={isMobile ? S.popMenuMobile : S.popMenu}>
+                        <div className="vp-pop-menu">
                           <img
                             src={shotUrl}
                             alt="screenshot"
-                            style={S.shotPreview}
+                            className="vp-shot-preview"
                           />
-                          <button style={S.popItem} onClick={downloadShot}>
+                          <button
+                            className="vp-pop-item"
+                            onClick={downloadShot}
+                          >
                             <FontAwesomeIcon icon={faDownload} />
-                            <span
-                              style={{
-                                marginLeft: 8,
-                                marginBottom: 0,
-                                marginTop: 0,
-                                marginRight: 0,
-                              }}
-                            >
-                              Download
-                            </span>
+                            <span>Download</span>
                           </button>
                           <button
-                            style={S.popItem}
+                            className="vp-pop-item"
                             onClick={() => setShotUrl(null)}
                           >
                             <FontAwesomeIcon icon={faXmark} />
-                            <span
-                              style={{
-                                marginLeft: 8,
-                                marginBottom: 0,
-                                marginTop: 0,
-                                marginRight: 0,
-                              }}
-                            >
-                              Close
-                            </span>
+                            <span>Close</span>
                           </button>
                         </div>
                       )}
                     </div>
 
-                    <div style={{ position: "relative" }}>
+                    <div className="vp-dropdown-wrap">
                       <button
-                        style={{
-                          ...S.ctrlBtn,
-                          fontSize: ctrlFontSize,
-                          width: btnSize,
-                          height: btnSize,
-                        }}
+                        className="vp-ctrl-btn"
                         onClick={() => setShowShareMenu((v) => !v)}
                         title="Share last 30s"
                       >
                         <FontAwesomeIcon icon={faShareNodes} />
                       </button>
                       {showShareMenu && (
-                        <div style={isMobile ? S.popMenuMobile : S.popMenu}>
-                          <div style={S.popLabel}>
+                        <div className="vp-pop-menu">
+                          <div className="vp-pop-label">
                             Share last {CLIP_SECONDS}s
+                            <button
+                              className="vp-pop-close"
+                              onClick={() => setShowShareMenu((v) => !v)}
+                            >
+                              X
+                            </button>
                           </div>
                           {clipBusy && (
-                            <div
-                              style={{
-                                ...S.popLabel,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6,
-                              }}
-                            >
+                            <div className="vp-pop-label">
                               <FontAwesomeIcon icon={faSpinner} spin />
                               Preparing clip…
                             </div>
                           )}
                           <button
-                            style={{
-                              position: "absolute",
-                              right: "5px",
-                              top: "1px",
-                              background: "none",
-                              color: "white",
-                              border: "1px solid white",
-                              borderRadius: "50%",
-                              padding: "4px 6px",
-                            }}
-                            onClick={() => setShowShareMenu((v) => !v)}
-                          >
-                            X
-                          </button>
-                          <button
-                            style={S.popItem}
+                            className="vp-pop-item"
                             onClick={() => shareClipWatermarked("whatsapp")}
                           >
                             <FontAwesomeIcon icon={faWhatsapp} />
-                            <span
-                              style={{
-                                marginLeft: 8,
-                                marginBottom: 0,
-                                marginLeft: 0,
-                                marginRight: 0,
-                              }}
-                            >
-                              WhatsApp
-                            </span>
+                            <span>WhatsApp</span>
                           </button>
                           <button
-                            style={S.popItem}
+                            className="vp-pop-item"
                             onClick={() => shareClipWatermarked("facebook")}
                           >
                             <FontAwesomeIcon icon={faFacebook} />
-                            <span style={{ marginLeft: 8 }}>Facebook</span>
+                            <span>Facebook</span>
                           </button>
                           <button
-                            style={S.popItem}
+                            className="vp-pop-item"
                             onClick={() => shareClipWatermarked("tiktok")}
                           >
                             <FontAwesomeIcon icon={faTiktok} />
-                            <span style={{ marginLeft: 8 }}>TikTok</span>
+                            <span>TikTok</span>
                           </button>
                         </div>
                       )}
                     </div>
 
-                    <div style={{ position: "relative" }}>
+                    <div className="vp-dropdown-wrap">
                       <button
-                        style={{
-                          ...S.ctrlBtn,
-                          fontSize: ctrlFontSize,
-                          width: btnSize,
-                          height: btnSize,
-                          opacity: subtitleUrl ? 1 : 0.55,
-                        }}
+                        className={`vp-ctrl-btn vp-ctrl-btn--subtitle ${subtitleUrl ? "has-subtitle" : ""}`}
                         onClick={() => setShowSubMenu((v) => !v)}
                         title="Subtitles"
                       >
                         <FontAwesomeIcon icon={faClosedCaptioning} />
                       </button>
                       {showSubMenu && (
-                        <div
-                          style={{
-                            ...(isMobile ? S.popMenuMobile : S.popMenu),
-                            width: isMobile ? "auto" : 280,
-                          }}
-                        >
-                          <div style={S.popLabel}>Subtitles</div>
-                          <button
-                            style={{
-                              position: "absolute",
-                              right: "6px",
-                              top: "2px",
-                              background: "none",
-                              color: "white",
-                              border: "1px solid white",
-                              borderRadius: "50%",
-                              padding: "4px 7px",
-                            }}
-                            onClick={() => setShowSubMenu((v) => !v)}
-                          >
-                            X
-                          </button>
+                        <div className="vp-pop-menu vp-pop-menu--wide">
+                          <div className="vp-pop-label">
+                            Subtitles
+                            <button
+                              className="vp-pop-close vp-pop-close--wide"
+                              onClick={() => setShowSubMenu((v) => !v)}
+                            >
+                              X
+                            </button>
+                          </div>
                           {subtitleUrl && (
                             <button
-                              style={S.popItem}
+                              className="vp-pop-item"
                               onClick={() => setSubtitlesOn((v) => !v)}
                             >
                               <FontAwesomeIcon
@@ -1902,16 +1616,14 @@ export default function VideoPlayer() {
                                   subtitlesOn ? faCheck : faClosedCaptioning
                                 }
                               />
-                              <span style={{ marginLeft: 8 }}>
+                              <span>
                                 {subtitlesOn ? "Enabled" : "Disabled"}
                               </span>
                             </button>
                           )}
-                          <label style={S.popItem}>
+                          <label className="vp-pop-item">
                             <FontAwesomeIcon icon={faFilm} />
-                            <span style={{ marginLeft: 8 }}>
-                              Upload .srt / .vtt
-                            </span>
+                            <span>Upload .srt / .vtt</span>
                             <input
                               type="file"
                               accept=".srt,.vtt"
@@ -1919,10 +1631,12 @@ export default function VideoPlayer() {
                               onChange={loadLocalSubtitle}
                             />
                           </label>
-                          <div style={S.popDivider} />
-                          <div style={S.popLabel}>OpenSubtitles Search</div>
+                          <div className="vp-pop-divider" />
+                          <div className="vp-pop-label">
+                            OpenSubtitles Search
+                          </div>
                           <button
-                            style={S.popItem}
+                            className="vp-pop-item"
                             onClick={searchSubtitles}
                             disabled={subSearching}
                           >
@@ -1932,23 +1646,23 @@ export default function VideoPlayer() {
                               }
                               spin={subSearching}
                             />
-                            <span style={{ marginLeft: 8 }}>
-                              Search "{currentEntry?.title}"
-                            </span>
+                            <span>Search "{currentEntry?.title}"</span>
                           </button>
-                          {subError && <div style={S.subError}>{subError}</div>}
+                          {subError && (
+                            <div className="vp-sub-error">{subError}</div>
+                          )}
                           {subResults.map((r) => (
                             <button
                               key={r.id}
-                              style={S.popItem}
+                              className="vp-pop-item"
                               onClick={() => downloadSubtitle(r)}
                             >
                               <FontAwesomeIcon icon={faDownload} />
-                              <span style={{ marginLeft: 8 }}>
+                              <span>
                                 {r.attributes?.release ||
                                   r.attributes?.feature_details?.title ||
                                   "Subtitle"}
-                                <span style={{ opacity: 0.5, marginLeft: 4 }}>
+                                <span className="vp-lang-tag">
                                   ({r.attributes?.language})
                                 </span>
                               </span>
@@ -1959,12 +1673,7 @@ export default function VideoPlayer() {
                     </div>
 
                     <button
-                      style={{
-                        ...S.ctrlBtn,
-                        fontSize: ctrlFontSize,
-                        width: btnSize,
-                        height: btnSize,
-                      }}
+                      className="vp-ctrl-btn"
                       onClick={rotate}
                       title="Rotate"
                     >
@@ -1972,12 +1681,7 @@ export default function VideoPlayer() {
                     </button>
 
                     <button
-                      style={{
-                        ...S.ctrlBtn,
-                        fontSize: ctrlFontSize,
-                        width: btnSize,
-                        height: btnSize,
-                      }}
+                      className="vp-ctrl-btn"
                       onClick={() => setShowConverter(true)}
                       title="Extract Audio (WAV)"
                     >
@@ -1985,32 +1689,20 @@ export default function VideoPlayer() {
                     </button>
 
                     {currentEntry?.sources.length > 1 && (
-                      <div style={{ position: "relative" }}>
+                      <div className="vp-dropdown-wrap">
                         <button
-                          style={{
-                            ...S.ctrlBtn,
-                            fontSize: isMobile ? 9 : 10,
-                            width: btnSize,
-                            height: btnSize,
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.5px",
-                          }}
+                          className="vp-ctrl-btn vp-ctrl-btn--quality"
                           onClick={() => setShowQualityMenu((v) => !v)}
                         >
                           {activeQuality}
                         </button>
                         {showQualityMenu && (
-                          <div style={isMobile ? S.popMenuMobile : S.popMenu}>
-                            <div style={S.popLabel}>Quality</div>
+                          <div className="vp-pop-menu">
+                            <div className="vp-pop-label">Quality</div>
                             {currentEntry.sources.map((s) => (
                               <button
                                 key={s.quality}
-                                style={{
-                                  ...S.popItem,
-                                  fontWeight:
-                                    s.quality === activeQuality ? 700 : 400,
-                                }}
+                                className={`vp-pop-item ${s.quality === activeQuality ? "active" : ""}`}
                                 onClick={() => {
                                   autoplayNextRef.current = playing;
                                   setActiveQuality(s.quality);
@@ -2024,9 +1716,7 @@ export default function VideoPlayer() {
                                       : faFilm
                                   }
                                 />
-                                <span style={{ marginLeft: 8 }}>
-                                  {s.quality}
-                                </span>
+                                <span>{s.quality}</span>
                               </button>
                             ))}
                           </div>
@@ -2034,34 +1724,26 @@ export default function VideoPlayer() {
                       </div>
                     )}
 
-                    <div style={{ position: "relative" }}>
+                    <div className="vp-dropdown-wrap">
                       <button
-                        style={{
-                          ...S.ctrlBtn,
-                          fontSize: isMobile ? 9 : 11,
-                          width: btnSize,
-                          height: btnSize,
-                        }}
+                        className="vp-ctrl-btn vp-ctrl-btn--gear"
                         onClick={() => setShowSettings((v) => !v)}
                       >
                         <FontAwesomeIcon icon={faGear} />
                       </button>
                       {showSettings && (
-                        <div style={isMobile ? S.popMenuMobile : S.popMenu}>
-                          <div style={S.popLabel}>Playback Speed</div>
+                        <div className="vp-pop-menu">
+                          <div className="vp-pop-label">Playback Speed</div>
                           {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
                             <button
                               key={s}
-                              style={{
-                                ...S.popItem,
-                                fontWeight: playbackRate === s ? 700 : 400,
-                              }}
+                              className={`vp-pop-item ${playbackRate === s ? "active" : ""}`}
                               onClick={() => changeSpeed(s)}
                             >
                               <FontAwesomeIcon
                                 icon={playbackRate === s ? faCheck : faGear}
                               />
-                              <span style={{ marginLeft: 8 }}>{s}×</span>
+                              <span>{s}×</span>
                             </button>
                           ))}
                         </div>
@@ -2069,12 +1751,7 @@ export default function VideoPlayer() {
                     </div>
 
                     <button
-                      style={{
-                        ...S.ctrlBtn,
-                        fontSize: ctrlFontSize,
-                        width: btnSize,
-                        height: btnSize,
-                      }}
+                      className="vp-ctrl-btn"
                       onClick={toggleFullscreen}
                       title="Fullscreen (F)"
                     >
@@ -2091,92 +1768,65 @@ export default function VideoPlayer() {
       </div>
 
       {playlist.length > 0 && (
-        <div style={sidebarStyle}>
+        <div className={`vp-sidebar ${playlistVisible ? "" : "hidden"}`}>
           {isMobile && (
             <div
-              style={S.dragHandle}
+              className="vp-drag-handle"
               onClick={() => setShowPlaylist((v) => !v)}
             >
-              <div style={S.dragHandlePill} />
+              <div className="vp-drag-handle-pill" />
             </div>
           )}
-          <div
-            style={{
-              ...S.sidebarHead,
-              padding: isMobile ? "10px 16px" : "24px 20px 16px",
-            }}
-          >
-            <FontAwesomeIcon
-              icon={faList}
-              style={{ color: "rgba(255,255,255,0.4)", marginRight: 8 }}
-            />
-            <span style={S.sidebarTitle}>Playlist</span>
-            <span style={S.sidebarCount}>{playlist.length} videos</span>
+          <div className="vp-sidebar-head">
+            <FontAwesomeIcon icon={faList} className="vp-icon-muted" />
+            <span className="vp-sidebar-title">Playlist</span>
+            <span className="vp-sidebar-count">{playlist.length} videos</span>
             <button
-              style={S.sidebarClose}
+              className="vp-sidebar-close"
               onClick={() => setShowPlaylist(false)}
             >
               <FontAwesomeIcon icon={faXmark} />
             </button>
           </div>
-          <div style={S.sidebarList}>
+          <div className="vp-sidebar-list">
             {playlist.map((p, i) => (
               <div
                 key={p.id}
-                style={{
-                  ...S.item,
-                  ...(i === currentIndex ? S.itemActive : {}),
-                  padding: isMobile ? "8px 14px" : "10px 20px",
-                  gap: isMobile ? 10 : 12,
-                  position: "relative",
-                }}
+                className={`vp-item ${i === currentIndex ? "active" : ""}`}
                 onClick={() => {
                   playEntry(i);
                   if (isMobile) setShowPlaylist(false);
                 }}
               >
-                <div
-                  style={{
-                    ...S.thumbWrap,
-                    width: isMobile ? 64 : 80,
-                    height: isMobile ? 36 : 45,
-                  }}
-                >
+                <div className="vp-thumb-wrap">
                   {p.thumb ? (
-                    <img src={p.thumb} alt={p.title} style={S.thumbImg} />
+                    <img src={p.thumb} alt={p.title} className="vp-thumb-img" />
                   ) : (
-                    <div style={S.thumbPlaceholder}>
+                    <div className="vp-thumb-placeholder">
                       <FontAwesomeIcon icon={faFilm} />
                     </div>
                   )}
                   {i === currentIndex && (
-                    <div style={S.nowPlayingBadge}>
-                      <FontAwesomeIcon
-                        icon={playing ? faPause : faPlay}
-                        style={{ fontSize: 9 }}
-                      />
+                    <div className="vp-now-playing-badge">
+                      <FontAwesomeIcon icon={playing ? faPause : faPlay} />
                     </div>
                   )}
                 </div>
 
-                <div style={S.itemBody}>
+                <div className="vp-item-body">
                   <div
-                    style={{
-                      ...S.itemTitle,
-                      color: i === currentIndex ? "#e50914" : "#eee",
-                      fontSize: isMobile ? 12 : 13,
-                    }}
+                    className={`vp-item-title ${i === currentIndex ? "active" : ""}`}
                   >
                     {p.title}
                   </div>
-                  <div style={S.itemMeta}>
+                  <div className="vp-item-meta">
                     {p.sources.map((s) => s.quality).join(" · ")} ·{" "}
                     {(p.sources[0].size / 1048576).toFixed(1)} MB
                   </div>
                 </div>
 
                 <button
-                  style={S.dotBtn}
+                  className="vp-dot-btn"
                   title="More options"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -2187,25 +1837,35 @@ export default function VideoPlayer() {
                 </button>
 
                 {itemMenuId === p.id && (
-                  <div style={S.itemMenu} onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="vp-item-menu"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
-                      style={S.itemMenuItem}
+                      className="vp-item-menu-item"
                       onClick={() => {
                         setItemMenuId(null);
                         convertEntryToAudio(p);
                       }}
                     >
-                      <FontAwesomeIcon icon={faMusic} style={S.itemMenuIcon} />
+                      <FontAwesomeIcon
+                        icon={faMusic}
+                        className="vp-item-menu-icon"
+                      />
                       <div>
-                        <div style={S.itemMenuLabel}>Convert to Audio</div>
-                        <div style={S.itemMenuSub}>Extract WAV from video</div>
+                        <div className="vp-item-menu-label">
+                          Convert to Audio
+                        </div>
+                        <div className="vp-item-menu-sub">
+                          Extract WAV from video
+                        </div>
                       </div>
                     </button>
 
-                    <div style={S.itemMenuDivider} />
+                    <div className="vp-item-menu-divider" />
 
                     <button
-                      style={S.itemMenuItem}
+                      className="vp-item-menu-item"
                       onClick={() => {
                         setItemMenuId(null);
                         setDetailEntry(p);
@@ -2213,104 +1873,73 @@ export default function VideoPlayer() {
                     >
                       <FontAwesomeIcon
                         icon={faCircleInfo}
-                        style={S.itemMenuIcon}
+                        className="vp-item-menu-icon"
                       />
                       <div>
-                        <div style={S.itemMenuLabel}>Video Details</div>
-                        <div style={S.itemMenuSub}>Size, quality, format</div>
+                        <div className="vp-item-menu-label">Video Details</div>
+                        <div className="vp-item-menu-sub">
+                          Size, quality, format
+                        </div>
                       </div>
                     </button>
 
-                    <div style={S.itemMenuDivider} />
+                    <div className="vp-item-menu-divider" />
 
-                    <div style={{ padding: "8px 14px 4px" }}>
-                      <div
-                        style={{
-                          ...S.itemMenuLabel,
-                          marginBottom: 6,
-                          opacity: 0.5,
-                          fontSize: 10,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.7px",
-                        }}
-                      >
-                        <FontAwesomeIcon
-                          icon={faShareNodes}
-                          style={{ marginRight: 6 }}
-                        />
-                        Share (with watermark)
+                    <div className="vp-item-menu-section">
+                      <div className="vp-item-menu-label vp-item-menu-label--section">
+                        <FontAwesomeIcon icon={faShareNodes} /> Share (with
+                        watermark)
                       </div>
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div className="vp-share-chips">
                         <button
-                          style={S.shareChip}
+                          className="vp-share-chip"
                           onClick={() => {
                             setItemMenuId(null);
                             shareEntryVideo(p, "whatsapp");
                           }}
                         >
-                          <FontAwesomeIcon
-                            icon={faWhatsapp}
-                            style={{ marginRight: 5 }}
-                          />
+                          <FontAwesomeIcon icon={faWhatsapp} />
                           WhatsApp
                         </button>
                         <button
-                          style={S.shareChip}
+                          className="vp-share-chip"
                           onClick={() => {
                             setItemMenuId(null);
                             shareEntryVideo(p, "facebook");
                           }}
                         >
-                          <FontAwesomeIcon
-                            icon={faFacebook}
-                            style={{ marginRight: 5 }}
-                          />
+                          <FontAwesomeIcon icon={faFacebook} />
                           Facebook
                         </button>
                         <button
-                          style={S.shareChip}
+                          className="vp-share-chip"
                           onClick={() => {
                             setItemMenuId(null);
                             shareEntryVideo(p, "tiktok");
                           }}
                         >
-                          <FontAwesomeIcon
-                            icon={faTiktok}
-                            style={{ marginRight: 5 }}
-                          />
+                          <FontAwesomeIcon icon={faTiktok} />
                           TikTok
                         </button>
                       </div>
                     </div>
 
-                    <div style={{ padding: "8px 14px 10px" }}>
-                      <div style={{ ...S.itemMenuSub, marginBottom: 4 }}>
-                        <FontAwesomeIcon
-                          icon={faStamp}
-                          style={{ marginRight: 5 }}
-                        />
-                        Watermark text (custom part)
+                    <div className="vp-item-menu-section--wm">
+                      <div className="vp-item-menu-sub">
+                        <FontAwesomeIcon icon={faStamp} /> Watermark text
+                        (custom part)
                       </div>
                       <input
-                        style={S.wmInput}
+                        className="vp-wm-input"
                         value={watermarkCustom}
                         maxLength={30}
                         onChange={(e) => setWatermarkCustom(e.target.value)}
                         onClick={(e) => e.stopPropagation()}
                         placeholder="Your name or brand…"
                       />
-                      <div
-                        style={{
-                          fontSize: 10,
-                          color: "rgba(255,255,255,0.3)",
-                          marginTop: 4,
-                        }}
-                      >
+                      <div className="vp-wm-preview">
                         Full watermark: "
-                        <strong style={{ color: "rgba(255,255,255,0.5)" }}>
-                          {fullWatermark(watermarkCustom)}
-                        </strong>
-                        "
+                        <strong>{fullWatermark(watermarkCustom)}</strong>"
                       </div>
                     </div>
                   </div>
@@ -2318,78 +1947,70 @@ export default function VideoPlayer() {
               </div>
             ))}
           </div>
-          <FolderPicker
-            style={{
-              ...S.changeFolder,
-              margin: isMobile ? "8px 14px 14px" : "12px 20px 20px",
-            }}
-          >
+          <FolderPicker className="vp-change-folder">
             <FontAwesomeIcon icon={faFolder} />
-            <span style={{ marginLeft: 8 }}>Change Folder</span>
+            <span>Change Folder</span>
           </FolderPicker>
         </div>
       )}
 
       {detailEntry && (
-        <div style={S.modalBackdrop} onClick={() => setDetailEntry(null)}>
+        <div className="vp-modal-backdrop" onClick={() => setDetailEntry(null)}>
           <div
-            style={{ ...S.modal, maxWidth: 420 }}
+            className="vp-modal vp-modal--sm"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={S.modalHead}>
+            <div className="vp-modal-head">
               <FontAwesomeIcon
                 icon={faCircleInfo}
-                style={{
-                  color: "var(--primary-color,#3390ec)",
-                  marginRight: 10,
-                }}
+                className="vp-modal-head-icon"
               />
-              <span style={S.modalTitle}>Video Details</span>
-              <button style={S.modalClose} onClick={() => setDetailEntry(null)}>
+              <span className="vp-modal-title">Video Details</span>
+              <button
+                className="vp-modal-close"
+                onClick={() => setDetailEntry(null)}
+              >
                 <FontAwesomeIcon icon={faXmark} />
               </button>
             </div>
-            <div style={S.modalBody}>
+            <div className="vp-modal-body">
               {detailEntry.thumb && (
                 <img
                   src={detailEntry.thumb}
                   alt={detailEntry.title}
-                  style={{
-                    width: "100%",
-                    borderRadius: 8,
-                    marginBottom: 16,
-                    objectFit: "cover",
-                    maxHeight: 160,
-                  }}
+                  className="vp-detail-thumb"
                 />
               )}
-              <div style={S.detailGrid}>
-                <div style={S.detailRow}>
-                  <FontAwesomeIcon icon={faFilm} style={S.detailIcon} />
+              <div className="vp-detail-grid">
+                <div className="vp-detail-row">
+                  <FontAwesomeIcon icon={faFilm} className="vp-detail-icon" />
                   <div>
-                    <div style={S.detailLabel}>Title</div>
-                    <div style={S.detailValue}>{detailEntry.title}</div>
+                    <div className="vp-detail-label">Title</div>
+                    <div className="vp-detail-value">{detailEntry.title}</div>
                   </div>
                 </div>
                 {detailEntry.sources.map((s, si) => (
-                  <div key={si} style={S.detailRow}>
-                    <FontAwesomeIcon icon={faHdd} style={S.detailIcon} />
+                  <div key={si} className="vp-detail-row">
+                    <FontAwesomeIcon icon={faHdd} className="vp-detail-icon" />
                     <div>
-                      <div style={S.detailLabel}>
+                      <div className="vp-detail-label">
                         Source {si + 1} — {s.quality.toUpperCase()}
                       </div>
-                      <div style={S.detailValue}>
+                      <div className="vp-detail-value">
                         {(s.size / 1048576).toFixed(2)} MB &nbsp;·&nbsp;{" "}
                         {s.file.type || "unknown"}
                       </div>
                     </div>
                   </div>
                 ))}
-                <div style={S.detailRow}>
-                  <FontAwesomeIcon icon={faCalendar} style={S.detailIcon} />
+                <div className="vp-detail-row">
+                  <FontAwesomeIcon
+                    icon={faCalendar}
+                    className="vp-detail-icon"
+                  />
                   <div>
-                    <div style={S.detailLabel}>Last Modified</div>
-                    <div style={S.detailValue}>
+                    <div className="vp-detail-label">Last Modified</div>
+                    <div className="vp-detail-value">
                       {detailEntry.sources[0].file.lastModified
                         ? new Date(
                             detailEntry.sources[0].file.lastModified,
@@ -2398,31 +2019,22 @@ export default function VideoPlayer() {
                     </div>
                   </div>
                 </div>
-                <div style={S.detailRow}>
-                  <FontAwesomeIcon icon={faStamp} style={S.detailIcon} />
+                <div className="vp-detail-row">
+                  <FontAwesomeIcon icon={faStamp} className="vp-detail-icon" />
                   <div>
-                    <div style={S.detailLabel}>
+                    <div className="vp-detail-label">
                       Watermark Text (custom part)
                     </div>
                     <input
-                      style={{ ...S.wmInput, marginTop: 4, width: "100%" }}
+                      className="vp-wm-input vp-wm-input--full"
                       value={watermarkCustom}
                       maxLength={30}
                       onChange={(e) => setWatermarkCustom(e.target.value)}
                       placeholder="Your name or brand…"
                     />
-                    <div
-                      style={{
-                        fontSize: 10,
-                        color: "rgba(255,255,255,0.3)",
-                        marginTop: 4,
-                      }}
-                    >
+                    <div className="vp-wm-preview vp-wm-preview--modal">
                       Full watermark: "
-                      <strong style={{ color: "rgba(255,255,255,0.5)" }}>
-                        {fullWatermark(watermarkCustom)}
-                      </strong>
-                      "
+                      <strong>{fullWatermark(watermarkCustom)}</strong>"
                     </div>
                   </div>
                 </div>
@@ -2434,7 +2046,7 @@ export default function VideoPlayer() {
 
       {shareEntry && shareStep !== "idle" && (
         <div
-          style={S.modalBackdrop}
+          className="vp-modal-backdrop"
           onClick={() => {
             if (shareStep !== "building") {
               setShareEntry(null);
@@ -2447,21 +2059,17 @@ export default function VideoPlayer() {
           }}
         >
           <div
-            style={{ ...S.modal, maxWidth: 380 }}
+            className="vp-modal vp-modal--xs"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={S.modalHead}>
-              <FontAwesomeIcon
-                icon={faStamp}
-                style={{
-                  color: "var(--primary-color,#3390ec)",
-                  marginRight: 10,
-                }}
-              />
-              <span style={S.modalTitle}>Preparing Watermarked Video</span>
+            <div className="vp-modal-head">
+              <FontAwesomeIcon icon={faStamp} className="vp-modal-head-icon" />
+              <span className="vp-modal-title">
+                Preparing Watermarked Video
+              </span>
               {shareStep !== "building" && (
                 <button
-                  style={S.modalClose}
+                  className="vp-modal-close"
                   onClick={() => {
                     setShareEntry(null);
                     setShareStep("idle");
@@ -2475,39 +2083,26 @@ export default function VideoPlayer() {
                 </button>
               )}
             </div>
-            <div style={S.modalBody}>
-              <div style={S.converterInfo}>
+            <div className="vp-modal-body">
+              <div className="vp-converter-info">
                 <FontAwesomeIcon
                   icon={faFilm}
-                  style={{ color: "rgba(255,255,255,0.4)", marginRight: 8 }}
+                  className="vp-converter-info-icon"
                 />
-                <span
-                  style={{
-                    color: "rgba(255,255,255,0.7)",
-                    fontSize: 13,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+                <span className="vp-converter-info-title">
                   {shareEntry.title}
                 </span>
               </div>
-              <div style={{ textAlign: "center", padding: "12px 0 8px" }}>
+              <div className="vp-share-status">
                 {shareStep === "building" && (
                   <>
                     <FontAwesomeIcon
                       icon={faSpinner}
                       spin
                       size="2x"
-                      style={{
-                        color: "var(--primary-color,#3390ec)",
-                        marginBottom: 12,
-                      }}
+                      className="vp-share-status-icon building"
                     />
-                    <div
-                      style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}
-                    >
+                    <div className="vp-share-status-text building">
                       Rendering frames with watermark… this may take a moment.
                     </div>
                   </>
@@ -2517,9 +2112,9 @@ export default function VideoPlayer() {
                     <FontAwesomeIcon
                       icon={faCheck}
                       size="2x"
-                      style={{ color: "#22c55e", marginBottom: 12 }}
+                      className="vp-share-status-icon done"
                     />
-                    <div style={{ color: "#22c55e", fontSize: 13 }}>
+                    <div className="vp-share-status-text done">
                       Done! File downloaded and share dialog opened.
                     </div>
                   </>
@@ -2529,18 +2124,18 @@ export default function VideoPlayer() {
                     <FontAwesomeIcon
                       icon={faXmark}
                       size="2x"
-                      style={{ color: "#ef4444", marginBottom: 12 }}
+                      className="vp-share-status-icon error"
                     />
-                    <div style={{ color: "#ef4444", fontSize: 13 }}>
+                    <div className="vp-share-status-text error">
                       Failed to render watermark. The video format may not be
                       supported by your browser's encoder.
                     </div>
                   </>
                 )}
               </div>
-              <p style={S.converterNote}>
+              <p className="vp-converter-note">
                 The watermark "
-                <strong style={{ color: "#fff" }}>
+                <strong className="vp-wm-strong-white">
                   {fullWatermark(watermarkCustom)}
                 </strong>
                 " is burned into the bottom-right corner of every frame. No data
@@ -2553,621 +2148,3 @@ export default function VideoPlayer() {
     </div>
   );
 }
-
-const S = {
-  root: {
-    display: "flex",
-    width: "100%",
-    height: `calc(100dvh - ${NAVBAR_H + BOTTOMBAR_H}px)`,
-    background: "var(--bg-main, #0f0f0f)",
-    fontFamily: "var(--font-body, system-ui, sans-serif)",
-    overflow: "hidden",
-    color: "var(--text-main, #fff)",
-    userSelect: "none",
-    WebkitUserSelect: "none",
-  },
-  main: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "#000",
-    position: "relative",
-    minWidth: 0,
-    minHeight: 0,
-  },
-  empty: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 20,
-    padding: "0 24px",
-    textAlign: "center",
-  },
-  openBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "14px 32px",
-    borderRadius: "var(--radius-md, 10px)",
-    background: "var(--primary-color, #3390ec)",
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: 600,
-    cursor: "pointer",
-    border: "none",
-    boxShadow: "0 4px 14px rgba(51,144,236,0.3)",
-    WebkitTapHighlightColor: "transparent",
-  },
-  linkBtn: {
-    background: "none",
-    border: "none",
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 13,
-    textDecoration: "underline",
-    cursor: "pointer",
-  },
-  cancelRestoreBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "11px 24px",
-    borderRadius: 8,
-    background: "rgba(255,255,255,0.07)",
-    border: "1px solid rgba(255,255,255,0.15)",
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-    WebkitTapHighlightColor: "transparent",
-    marginTop: 4,
-  },
-  emptyHint: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 13,
-    margin: 0,
-    maxWidth: 260,
-  },
-  player: {
-    position: "relative",
-    width: "100%",
-    height: "100%",
-    background: "#000",
-    overflow: "hidden",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  video: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
-    background: "#000",
-    display: "block",
-    zIndex: 1,
-    transition: "transform 0.3s ease",
-  },
-  spinnerWrap: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-    pointerEvents: "none",
-  },
-  overlay: {
-    position: "absolute",
-    inset: 0,
-    zIndex: 3,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    background:
-      "linear-gradient(to bottom,rgba(0,0,0,0.55) 0%,transparent 25%,transparent 75%,rgba(0,0,0,0.78) 100%)",
-    transition: "opacity 0.3s cubic-bezier(0.25,1,0.5,1)",
-    cursor: "default",
-  },
-  playlistToggle: {
-    position: "absolute",
-    top: 12,
-    right: 14,
-    zIndex: 4,
-    borderRadius: "50%",
-    background: "rgba(255,255,255,0.12)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    backdropFilter: "blur(16px)",
-    WebkitBackdropFilter: "blur(16px)",
-    transition: "opacity 0.3s, background 0.2s",
-    WebkitTapHighlightColor: "transparent",
-  },
-  titleBar: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  titleText: {
-    color: "#fff",
-    fontWeight: 500,
-    flex: 1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  smallBtn: {
-    borderRadius: "50%",
-    background: "rgba(255,255,255,0.12)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    flexShrink: 0,
-    backdropFilter: "blur(16px)",
-    WebkitBackdropFilter: "blur(16px)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    WebkitTapHighlightColor: "transparent",
-  },
-  centerRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconBtn: {
-    background: "none",
-    border: "none",
-    color: "#fff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    borderRadius: 8,
-    WebkitTapHighlightColor: "transparent",
-  },
-  playBig: {
-    borderRadius: "50%",
-    background: "rgba(255,255,255,0.18)",
-    border: "1px solid rgba(255,255,255,0.28)",
-    color: "#fff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backdropFilter: "blur(16px)",
-    WebkitBackdropFilter: "blur(16px)",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.35)",
-    WebkitTapHighlightColor: "transparent",
-    flexShrink: 0,
-  },
-  progressWrap: { position: "relative", cursor: "pointer" },
-  track: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: "50%",
-    transform: "translateY(-50%)",
-    borderRadius: 3,
-    overflow: "hidden",
-    background: "rgba(255,255,255,0.2)",
-  },
-  trackFill: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    height: "100%",
-    borderRadius: 3,
-    transition: "width 0.1s linear",
-  },
-  rangeOverlay: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    width: "100%",
-    height: "100%",
-    opacity: 0,
-    cursor: "pointer",
-    margin: 0,
-  },
-  ctrlRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  ctrlLeft: { display: "flex", alignItems: "center" },
-  ctrlRight: { display: "flex", alignItems: "center" },
-  ctrlBtn: {
-    background: "none",
-    border: "none",
-    color: "#fff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-    lineHeight: 1,
-    WebkitTapHighlightColor: "transparent",
-    flexShrink: 0,
-  },
-  timeText: {
-    color: "rgba(255,255,255,0.65)",
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 500,
-    whiteSpace: "nowrap",
-  },
-  popMenu: {
-    position: "absolute",
-    bottom: "115%",
-    right: 0,
-    background: "rgba(14,20,32,0.96)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 12,
-    padding: "8px 0",
-    zIndex: 20,
-    minWidth: 180,
-    maxWidth: "90vw",
-    boxShadow: "0 12px 40px rgba(0,0,0,0.65)",
-  },
-  popMenuMobile: {
-    position: "absolute",
-    bottom: "115%",
-    right: 0,
-    background: "rgba(14,20,32,0.97)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 12,
-    padding: "8px 0",
-    zIndex: 20,
-    minWidth: 210,
-    maxWidth: "88vw",
-    maxHeight: "42vh",
-    overflowY: "auto",
-    boxShadow: "0 12px 40px rgba(0,0,0,0.75)",
-  },
-  popItem: {
-    display: "flex",
-    alignItems: "center",
-    width: "100%",
-    padding: "12px 16px",
-    textAlign: "left",
-    background: "none",
-    border: "none",
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-    WebkitTapHighlightColor: "transparent",
-  },
-  popLabel: {
-    padding: "4px 16px 6px",
-    fontSize: 10,
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase",
-    letterSpacing: "0.8px",
-  },
-  popDivider: {
-    height: 1,
-    background: "rgba(255,255,255,0.07)",
-    margin: "4px 0",
-  },
-  shotPreview: { width: "100%", borderRadius: "8px 8px 0 0", display: "block" },
-  subError: {
-    padding: "6px 16px",
-    fontSize: 11,
-    color: "#f87171",
-    lineHeight: 1.5,
-  },
-  sidebar: {
-    display: "flex",
-    flexDirection: "column",
-    background: "var(--bg-nav, #111)",
-    borderLeft: "1px solid rgba(255,255,255,0.06)",
-    flexShrink: 0,
-    transition: "margin-right 0.3s cubic-bezier(0.25,1,0.5,1), opacity 0.3s",
-  },
-  dragHandle: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 10,
-    paddingBottom: 4,
-    cursor: "pointer",
-  },
-  dragHandlePill: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    background: "rgba(255,255,255,0.2)",
-  },
-  sidebarHead: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-    flexShrink: 0,
-  },
-  sidebarTitle: { color: "#fff", fontWeight: 600, fontSize: 14, flex: 1 },
-  sidebarCount: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 11,
-    fontWeight: 500,
-  },
-  sidebarClose: {
-    background: "none",
-    border: "none",
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 14,
-    cursor: "pointer",
-    padding: 6,
-    WebkitTapHighlightColor: "transparent",
-  },
-  sidebarList: { flex: 1, overflowY: "auto", padding: "8px 0" },
-  item: {
-    display: "flex",
-    alignItems: "center",
-    cursor: "pointer",
-    borderLeftWidth: 3,
-    borderLeftStyle: "solid",
-    borderLeftColor: "transparent",
-    WebkitTapHighlightColor: "transparent",
-  },
-  itemActive: {
-    background: "rgba(51,144,236,0.1)",
-    borderLeftColor: "var(--primary-color, #3390ec)",
-  },
-  thumbWrap: {
-    position: "relative",
-    borderRadius: 6,
-    overflow: "hidden",
-    flexShrink: 0,
-    background: "rgba(255,255,255,0.06)",
-  },
-  thumbImg: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    display: "block",
-  },
-  thumbPlaceholder: {
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "rgba(255,255,255,0.25)",
-    fontSize: 16,
-  },
-  nowPlayingBadge: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "rgba(0,0,0,0.52)",
-    color: "#e50914",
-  },
-  itemBody: { flex: 1, minWidth: 0 },
-  itemTitle: {
-    fontWeight: 500,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    marginBottom: 3,
-  },
-  itemMeta: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 10,
-    fontWeight: 500,
-    textTransform: "uppercase",
-    letterSpacing: "0.3px",
-  },
-  changeFolder: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 12,
-    borderRadius: 8,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-    flexShrink: 0,
-    WebkitTapHighlightColor: "transparent",
-  },
-  dotBtn: {
-    flexShrink: 0,
-    background: "none",
-    border: "none",
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 16,
-    cursor: "pointer",
-    padding: "6px 8px",
-    borderRadius: 6,
-    WebkitTapHighlightColor: "transparent",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  itemMenu: {
-    position: "absolute",
-    right: 8,
-    top: "100%",
-    zIndex: 30,
-    background: "rgba(14,20,32,0.98)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    padding: "6px 0",
-    minWidth: 230,
-    boxShadow: "0 16px 48px rgba(0,0,0,0.75)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-  },
-  itemMenuItem: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 12,
-    width: "100%",
-    padding: "10px 14px",
-    background: "none",
-    border: "none",
-    color: "#fff",
-    cursor: "pointer",
-    textAlign: "left",
-    WebkitTapHighlightColor: "transparent",
-  },
-  itemMenuIcon: {
-    color: "var(--primary-color,#3390ec)",
-    fontSize: 15,
-    marginTop: 2,
-    flexShrink: 0,
-  },
-  itemMenuLabel: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#fff",
-    lineHeight: 1.3,
-  },
-  itemMenuSub: { fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 },
-  itemMenuDivider: {
-    height: 1,
-    background: "rgba(255,255,255,0.07)",
-    margin: "4px 0",
-  },
-  shareChip: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "5px 10px",
-    borderRadius: 20,
-    fontSize: 11,
-    fontWeight: 600,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.06)",
-    color: "#fff",
-    cursor: "pointer",
-    WebkitTapHighlightColor: "transparent",
-    whiteSpace: "nowrap",
-  },
-  wmInput: {
-    width: "100%",
-    padding: "7px 10px",
-    borderRadius: 6,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.06)",
-    color: "#fff",
-    fontSize: 12,
-    outline: "none",
-    boxSizing: "border-box",
-  },
-  detailGrid: { display: "flex", flexDirection: "column", gap: 12 },
-  detailRow: { display: "flex", alignItems: "flex-start", gap: 12 },
-  detailIcon: {
-    color: "var(--primary-color,#3390ec)",
-    fontSize: 14,
-    marginTop: 3,
-    flexShrink: 0,
-    width: 16,
-  },
-  detailLabel: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase",
-    letterSpacing: "0.6px",
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontSize: 13,
-    color: "#fff",
-    fontWeight: 500,
-    wordBreak: "break-all",
-  },
-  modalBackdrop: {
-    position: "fixed",
-    inset: 0,
-    zIndex: 100,
-    background: "rgba(0,0,0,0.72)",
-    backdropFilter: "blur(6px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-  },
-  modal: {
-    width: "100%",
-    maxWidth: 480,
-    background: "rgba(14,20,32,0.98)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 16,
-    overflow: "hidden",
-    boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
-  },
-  modalHead: {
-    display: "flex",
-    alignItems: "center",
-    padding: "18px 20px",
-    borderBottom: "1px solid rgba(255,255,255,0.07)",
-  },
-  modalTitle: { flex: 1, fontSize: 15, fontWeight: 600, color: "#fff" },
-  modalClose: {
-    background: "none",
-    border: "none",
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 16,
-    cursor: "pointer",
-    padding: 4,
-    WebkitTapHighlightColor: "transparent",
-  },
-  modalBody: { padding: "20px" },
-  converterInfo: {
-    display: "flex",
-    alignItems: "center",
-    padding: "10px 14px",
-    borderRadius: 8,
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    marginBottom: 16,
-    overflow: "hidden",
-  },
-  converterProgress: { marginBottom: 16 },
-  converterBar: {
-    height: 6,
-    borderRadius: 3,
-    background: "rgba(255,255,255,0.1)",
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  converterFill: {
-    height: "100%",
-    borderRadius: 3,
-    transition: "width 0.4s ease, background 0.3s ease",
-  },
-  converterLabel: { fontSize: 12, display: "flex", alignItems: "center" },
-  converterNote: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.4)",
-    lineHeight: 1.6,
-    margin: "0 0 20px",
-    padding: 0,
-  },
-  converterActions: { display: "flex", flexWrap: "wrap", gap: 10 },
-  converterBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "11px 20px",
-    borderRadius: 8,
-    background: "var(--primary-color, #3390ec)",
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: 600,
-    border: "none",
-    cursor: "pointer",
-    WebkitTapHighlightColor: "transparent",
-  },
-};
