@@ -12,6 +12,10 @@ import {
   faSearch,
   faArrowLeftLong,
   faPlay,
+  faFire,
+  faEllipsis,
+  faDownload,
+  faEllipsisVertical,
 } from "@fortawesome/free-solid-svg-icons";
 
 function Navbar({ isScrolled }) {
@@ -73,8 +77,23 @@ function Navbar({ isScrolled }) {
           </button>
         </div>
       ) : (
-        <div className="mobile-search-trigger" onClick={handleSearchIcon}>
-          <FontAwesomeIcon icon={faSearch} className="icon-search" />
+        <div className="mobile-search-trigger">
+          <FontAwesomeIcon
+            icon={faSearch}
+            className="icon-search"
+            onClick={handleSearchIcon}
+          />
+          <NavLink to="/about" style={{ zIndex: "10003" }}>
+            <span>
+              <FontAwesomeIcon
+                icon={faEllipsisVertical}
+                style={{
+                  color: "white",
+                  fontSize: "24px",
+                }}
+              />
+            </span>
+          </NavLink>
         </div>
       )}
 
@@ -86,14 +105,14 @@ function Navbar({ isScrolled }) {
           }
           onClick={restoreHome}
         >
-          <span className="nav-text">Home</span>
+          <span className="nav-text">Trending</span>
           <div className="icon-container">
             <FontAwesomeIcon
-              icon={isSearchActive ? faSearch : faHome}
+              icon={isSearchActive ? faSearch : faFire}
               className={`icon-outline ${isSearchActive ? "search-style" : ""}`}
             />
             <p className="icon-outline-p">
-              {isSearchActive ? "Search" : "Home"}
+              {isSearchActive ? "Searching" : "Trending"}
             </p>
           </div>
         </NavLink>
@@ -152,10 +171,16 @@ function Navbar({ isScrolled }) {
             isActive ? "icon-active" : "icon-default"
           }
         >
-          <span className="nav-text">playCrawler</span>
+          <span className="nav-text">
+            <FontAwesomeIcon
+              icon={faPlay}
+              className="icon-outline"
+              style={{ color: "goldenrod" }}
+            />
+          </span>
           <div className="icon-container">
-            <FontAwesomeIcon icon={faPlay} className="icon-outline" />
-            <p className="icon-outline-p">PlayCrawl</p>
+            <FontAwesomeIcon icon={faPlay} className="icon-outline wmx" />
+            <p className="icon-outline-p">WMX</p>
           </div>
         </NavLink>
       </div>

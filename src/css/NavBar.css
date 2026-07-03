@@ -155,9 +155,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 2rem;
        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
        position: fixed;
-        right: 1.45rem;
+        right: 0.45rem;
         top: 1rem;
         z-index: 1002;
     }
@@ -177,7 +178,7 @@
 
     }
 
-    .mobile-back-trigger:hover .icon-back,   .mobile-search-trigger:hover .icon-search {
+    .mobile-back-trigger:hover .icon-back,   .icon-search:hover {
     color: var(--primary-color);
     transform: translateX(-4px);
 }
@@ -296,7 +297,12 @@
     .icon-active .icon-outline, .icon-active .icon-outline-p{
     color: var(--text-main);
     }
+
      
+    .icon-active .wmx{
+        color: var(--accent-color);
+
+    }
 
     .icon-outline a:active {
     transform: scale(0.9); 
