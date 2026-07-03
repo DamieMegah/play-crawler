@@ -166,7 +166,7 @@ function Navbar({ isScrolled }) {
         </NavLink>
 
         <NavLink
-          to="/about"
+          to="/player"
           className={({ isActive }) =>
             isActive ? "icon-active" : "icon-default"
           }
