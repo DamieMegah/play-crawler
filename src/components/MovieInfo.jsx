@@ -249,7 +249,7 @@ function MovieInfo() {
                 }}
               >
                 {" "}
-                &times;close
+                &times;
               </button>
             )}
 
