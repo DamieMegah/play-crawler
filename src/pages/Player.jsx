@@ -161,6 +161,7 @@ function audioBufferToWav(buffer) {
 }
 
 export default function VideoPlayer() {
+  const videoInput = useRef(null);
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const controlsTimer = useRef(null);
@@ -1440,7 +1441,7 @@ export default function VideoPlayer() {
               onClick={() => videoInput.current?.click()}
             >
               <FontAwesomeIcon icon={faFilm} />
-              <span style={{ marginLeft: 10 }}>Open Video</span>
+              <span style={{ marginLeft: 10 }}>Select A Video</span>
             </button>
 
             <input
