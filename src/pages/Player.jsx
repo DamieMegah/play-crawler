@@ -497,6 +497,22 @@ export default function VideoPlayer() {
     };
   }, [playlist.length]);
 
+  const loadSingleVideo = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const entries = await buildPlaylist([file]);
+
+    setPlaylist(entries);
+    setCurrentIndex(0);
+    setActiveQuality(entries[0]?.sources[0]?.quality ?? null);
+    setFolderName(file.name);
+    setNeedsReconnect(false);
+
+    // Allows selecting the same file again later
+    e.target.value = "";
+  };
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !currentSource) return;
@@ -1415,6 +1431,25 @@ export default function VideoPlayer() {
                 ? "This folder will be remembered next time."
                 : "Select a folder containing video files"}
             </p>
+            <button
+              type="button"
+              style={{
+                ...S.openBtn,
+                marginTop: 12,
+              }}
+              onClick={() => videoInput.current?.click()}
+            >
+              <FontAwesomeIcon icon={faFilm} />
+              <span style={{ marginLeft: 10 }}>Open Video</span>
+            </button>
+
+            <input
+              ref={videoInput}
+              type="file"
+              accept="video/*"
+              hidden
+              onChange={loadSingleVideo}
+            />
           </div>
         ) : (
           <div
