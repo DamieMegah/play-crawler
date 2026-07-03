@@ -47,25 +47,10 @@ const DB_STORE = "handles";
 const DB_KEY = "lastFolder";
 const CLIP_SECONDS = 30;
 const CHUNK_MS = 1000;
+const WATERMARK_SAFE_TIMEOUT = 120_000; // 2 minutes max for watermark encoding
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ADJUSTMENT POINT 1 — Navbar / bottom-bar heights
-//
-// Set these to match whatever your parent layout uses.
-// They are used in TWO places:
-//   • S.root height  (subtracts both so the player fits between them)
-//   • sidebarStyle bottom offset on mobile (so the sheet sits above the bottom bar)
-//
-// If your navbar is 56 px and you have no bottom bar, set:
-//   NAVBAR_H   = 56
-//   BOTTOMBAR_H = 0
-//
-// If you use CSS variables in your app (e.g. --navbar-height), you can replace
-// the pixel values with `"var(--navbar-height)"` etc. — but then also change
-// the calc() strings below to match.
-// ─────────────────────────────────────────────────────────────────────────────
-const NAVBAR_H = 60; // px — height of your top navbar
-const BOTTOMBAR_H = 56; // px — height of your bottom tab-bar (0 if none)
+const NAVBAR_H = 60;
+const BOTTOMBAR_H = 56;
 
 const supportsFSAccess =
   typeof window !== "undefined" && "showDirectoryPicker" in window;
@@ -160,7 +145,7 @@ function audioBufferToWav(buffer) {
   return new Blob([arrayBuffer], { type: "audio/wav" });
 }
 
-export default function WMX() {
+export default function VideoPlayer() {
   const videoInput = useRef(null);
   const videoRef = useRef(null);
   const playerRef = useRef(null);
@@ -170,8 +155,6 @@ export default function WMX() {
   const chunkBufferRef = useRef([]);
   const trackUrlRef = useRef(null);
   const autoplayNextRef = useRef(false);
-  // Cancellation signal for the restore-last-folder flow.
-  // Set to a new AbortController at restore start; .abort() kills it mid-flight.
   const restoreAbortRef = useRef(null);
 
   const winW = useWindowWidth();
@@ -214,20 +197,13 @@ export default function WMX() {
   const [convertedUrl, setConvertedUrl] = useState(null);
   const [convertedName, setConvertedName] = useState("");
 
-  // ── Playlist item three-dot menu ──
-  const [itemMenuId, setItemMenuId] = useState(null); // playlist entry id with open menu
-  const [detailEntry, setDetailEntry] = useState(null); // entry shown in detail modal
-  const [shareEntry, setShareEntry] = useState(null); // entry being shared (with watermark)
-  const [shareStep, setShareStep] = useState("idle"); // idle | building | done | error
+  // Playlist item menu + detail modal + share
+  const [itemMenuId, setItemMenuId] = useState(null);
+  const [detailEntry, setDetailEntry] = useState(null);
+  const [shareEntry, setShareEntry] = useState(null);
+  const [shareStep, setShareStep] = useState("idle");
   const [shareUrl, setShareUrl] = useState(null);
-  const [watermarkText, setWatermarkText] = useState("My Video Player");
-
-  const osKey =
-    (typeof import.meta !== "undefined" &&
-      import.meta.env?.VITE_OPENSUBTITLES_API_KEY) ||
-    (typeof process !== "undefined" &&
-      process.env?.REACT_APP_OPENSUBTITLES_API_KEY) ||
-    "";
+  const [watermarkCustom, setWatermarkCustom] = useState("My Video");
 
   const dirHandleRef = useRef(null);
   const currentEntry = playlist[currentIndex] ?? null;
@@ -235,6 +211,12 @@ export default function WMX() {
     ? currentEntry.sources.find((s) => s.quality === activeQuality) ||
       currentEntry.sources[0]
     : null;
+
+  // Full watermark = custom text + immutable " | via impx" suffix
+  const fullWatermark = (custom) => {
+    const trimmed = custom.trim();
+    return trimmed ? `${trimmed} | via impx` : "via impx";
+  };
 
   useEffect(() => {
     return () => {
@@ -275,7 +257,6 @@ export default function WMX() {
         .sources.push({ quality, url, file, size: file.size });
     }
     const entries = [...groups.values()];
-    // Generate thumbs one-by-one so we can abort between them
     for (const e of entries) {
       if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
       await generateThumb(e);
@@ -331,7 +312,6 @@ export default function WMX() {
   const readDirHandle = async (handle, signal) => {
     const files = [];
     for await (const entry of handle.values()) {
-      // Bail out immediately if user cancelled
       if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
       if (entry.kind === "file") {
         const file = await entry.getFile();
@@ -341,23 +321,17 @@ export default function WMX() {
     return files;
   };
 
-  // cancelRestore — called by the "Select New Folder" button shown during restore.
-  // Aborts the in-flight async chain instantly; no more file reads or thumb
-  // generation will run after this, and all blob URLs created so far are revoked.
   const cancelRestore = () => {
     restoreAbortRef.current?.abort();
     setRestoring(false);
     setNeedsReconnect(false);
     setFolderName("");
     dirHandleRef.current = null;
-    // Clear the stored handle so we never auto-restore this folder again
     idbSet(DB_KEY, null).catch(() => {});
   };
 
   useEffect(() => {
     if (!supportsFSAccess) return setRestoring(false);
-
-    // Fresh controller for this restore attempt
     const ctrl = new AbortController();
     restoreAbortRef.current = ctrl;
     const { signal } = ctrl;
@@ -366,23 +340,16 @@ export default function WMX() {
       try {
         const handle = await idbGet(DB_KEY);
         if (!handle || signal.aborted) return setRestoring(false);
-
         dirHandleRef.current = handle;
         setFolderName(handle.name);
-
         const perm = await handle.queryPermission({ mode: "read" });
         if (signal.aborted) return;
-
         if (perm === "granted") {
-          // Pass the signal into every async step so they stop the moment
-          // the user clicks "Select New Folder"
           const files = await readDirHandle(handle, signal);
           if (signal.aborted) return;
-
           if (files.length) {
             const entries = await buildPlaylist(files, signal);
             if (signal.aborted) {
-              // Revoke any blob URLs that were created before the abort
               entries.forEach((e) => {
                 e.sources.forEach((s) => URL.revokeObjectURL(s.url));
                 if (e.thumb) URL.revokeObjectURL(e.thumb);
@@ -398,13 +365,11 @@ export default function WMX() {
         }
       } catch (err) {
         if (err.name !== "AbortError") console.error("Restore error:", err);
-        // AbortError is expected — silently swallow it
       } finally {
         if (!signal.aborted) setRestoring(false);
       }
     })();
 
-    // If the component unmounts mid-restore, abort automatically
     return () => ctrl.abort();
   }, []);
 
@@ -454,6 +419,22 @@ export default function WMX() {
     return () => video.removeEventListener("loadedmetadata", onReady);
   }, [currentIndex]);
 
+  const loadSingleVideo = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const entries = await buildPlaylist([file]);
+
+    setPlaylist(entries);
+    setCurrentIndex(0);
+    setActiveQuality(entries[0]?.sources[0]?.quality ?? null);
+    setFolderName(file.name);
+    setNeedsReconnect(false);
+
+    // Allows selecting the same file again later
+    e.target.value = "";
+  };
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -497,22 +478,6 @@ export default function WMX() {
       video.removeEventListener("ended", onEnded);
     };
   }, [playlist.length]);
-
-  const loadSingleVideo = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const entries = await buildPlaylist([file]);
-
-    setPlaylist(entries);
-    setCurrentIndex(0);
-    setActiveQuality(entries[0]?.sources[0]?.quality ?? null);
-    setFolderName(file.name);
-    setNeedsReconnect(false);
-
-    // Allows selecting the same file again later
-    e.target.value = "";
-  };
 
   useEffect(() => {
     const video = videoRef.current;
@@ -620,7 +585,6 @@ export default function WMX() {
     return () => window.removeEventListener("keydown", fn);
   }, [volume, currentIndex, playlist.length, isMobile]);
 
-  // Close the three-dot menu on any outside click
   useEffect(() => {
     if (!itemMenuId) return;
     const fn = () => setItemMenuId(null);
@@ -663,6 +627,7 @@ export default function WMX() {
     setFolderName(files[0]?.webkitRelativePath?.split("/")[0] ?? "");
     setNeedsReconnect(false);
   };
+
   const pickFolderFSAccess = async () => {
     try {
       const handle = await window.showDirectoryPicker();
@@ -677,6 +642,7 @@ export default function WMX() {
       setNeedsReconnect(false);
     } catch {}
   };
+
   const reconnectFolder = async () => {
     const handle = dirHandleRef.current;
     if (!handle) return;
@@ -690,6 +656,7 @@ export default function WMX() {
       setNeedsReconnect(false);
     }
   };
+
   const openFolder = supportsFSAccess ? pickFolderFSAccess : null;
 
   const playPause = async () => {
@@ -798,118 +765,158 @@ export default function WMX() {
     }
   };
 
-  const shareClip = async (target) => {
-    const blob = clipBlob || (await buildClip());
-    if (!blob) return;
-    const fileName = `${(currentEntry?.title || "clip").replace(/\s+/g, "_")}.webm`;
-    const file = new File([blob], fileName, { type: blob.type });
-    const text = `Check out this clip from "${currentEntry?.title || "this video"}"`;
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          text,
-          title: currentEntry?.title,
-        });
-        return;
-      } catch {}
-    }
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = fileName;
-    a.click();
-    if (target === "whatsapp")
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-    else if (target === "facebook")
-      window.open(
-        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`,
-        "_blank",
-      );
-    else if (target === "tiktok")
-      window.open("https://www.tiktok.com/upload", "_blank");
-  };
-
-  // ── Watermark helpers ──────────────────────────────────────────────────────
-  // Draws watermark text onto every frame of a canvas using OffscreenCanvas +
-  // MediaRecorder. Works on the raw video file via a hidden <video> element
-  // so it works even when the video is NOT currently playing.
-  const buildWatermarkedClip = async (entry, clipBlobIn) => {
-    // If a clip blob is provided (last-30s share), watermark that;
-    // otherwise watermark the raw source file (full-video share).
-    const sourceBlob = clipBlobIn ? clipBlobIn : entry.sources[0].file;
-
+  // ────────────────────────────────────────────────────────────────────────
+  // WATERMARK HELPERS — Fixed for Android + immutable "via impx" suffix
+  // ────────────────────────────────────────────────────────────────────────
+  const buildWatermarkedClip = (entry, clipBlobIn) => {
     const url = clipBlobIn
       ? URL.createObjectURL(clipBlobIn)
       : entry.sources[0].url;
     const needRevoke = !!clipBlobIn;
 
     return new Promise((resolve, reject) => {
+      // Regular <canvas>, not OffscreenCanvas (Android support)
+      const canvas = document.createElement("canvas");
+      canvas.style.cssText =
+        "position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;";
+      document.body.appendChild(canvas);
+      const ctx = canvas.getContext("2d");
+
       const vid = document.createElement("video");
       vid.muted = true;
       vid.playsInline = true;
       vid.src = url;
       vid.crossOrigin = "anonymous";
 
-      vid.addEventListener("loadedmetadata", async () => {
-        const W = vid.videoWidth || 640;
-        const H = vid.videoHeight || 360;
+      let rec = null;
+      let running = false;
+      const chunks = [];
 
-        // OffscreenCanvas for drawing frames + watermark text
-        const canvas = new OffscreenCanvas(W, H);
-        const ctx = canvas.getContext("2d");
+      const cleanup = () => {
+        running = false;
+        if (needRevoke) URL.revokeObjectURL(url);
+        try {
+          canvas.remove();
+        } catch {}
+        try {
+          vid.pause();
+          vid.removeAttribute("src");
+          vid.load();
+        } catch {}
+      };
 
-        const stream = canvas.captureStream(30);
+      const finish = () => {
+        if (!running) return;
+        running = false;
+        if (rec && rec.state !== "inactive") {
+          rec.stop(); // onstop will handle resolve
+        } else {
+          cleanup();
+          resolve(new Blob(chunks, { type: "video/webm" }));
+        }
+      };
+
+      // 2-minute safety timeout — prevents forever-stuck on very long videos
+      const safetyTimer = setTimeout(() => {
+        console.warn(
+          "Watermark: safety timeout fired after",
+          WATERMARK_SAFE_TIMEOUT / 1000,
+          "seconds",
+        );
+        finish();
+      }, WATERMARK_SAFE_TIMEOUT);
+
+      vid.addEventListener("loadedmetadata", () => {
+        canvas.width = vid.videoWidth || 640;
+        canvas.height = vid.videoHeight || 360;
+        const W = canvas.width;
+        const H = canvas.height;
+
         const mime =
           [
             "video/webm;codecs=vp9,opus",
             "video/webm;codecs=vp8,opus",
             "video/webm",
           ].find((m) => MediaRecorder.isTypeSupported?.(m)) || "video/webm";
-        const rec = new MediaRecorder(stream, { mimeType: mime });
-        const chunks = [];
-        rec.ondataavailable = (e) => e.data?.size && chunks.push(e.data);
+
+        let stream;
+        try {
+          stream = canvas.captureStream(30);
+        } catch (err) {
+          cleanup();
+          clearTimeout(safetyTimer);
+          reject(new Error("captureStream not supported: " + err.message));
+          return;
+        }
+
+        rec = new MediaRecorder(stream, { mimeType: mime });
+        rec.ondataavailable = (e) => {
+          if (e.data?.size) chunks.push(e.data);
+        };
         rec.onstop = () => {
-          if (needRevoke) URL.revokeObjectURL(url);
+          clearTimeout(safetyTimer);
+          cleanup();
           resolve(new Blob(chunks, { type: mime }));
         };
         rec.onerror = () => {
-          if (needRevoke) URL.revokeObjectURL(url);
-          reject(new Error("rec error"));
+          clearTimeout(safetyTimer);
+          cleanup();
+          reject(new Error("MediaRecorder error"));
         };
 
-        rec.start(500);
+        rec.start(200);
+        running = true;
+
+        const wm = fullWatermark(watermarkCustom);
 
         const drawFrame = () => {
-          if (vid.paused || vid.ended) {
-            rec.stop();
+          if (!running) return;
+          if (vid.ended || vid.paused) {
+            finish();
             return;
           }
+
           ctx.drawImage(vid, 0, 0, W, H);
 
-          // Watermark — bottom-right corner, semi-transparent
-          const fsize = Math.max(14, Math.round(W * 0.03));
+          // Watermark: bottom-right, shadow + white text
+          const fsize = Math.max(13, Math.round(W * 0.028));
+          ctx.save();
           ctx.font = `bold ${fsize}px sans-serif`;
           ctx.textAlign = "right";
           ctx.textBaseline = "bottom";
-          // Shadow for readability on any background
-          ctx.shadowColor = "rgba(0,0,0,0.8)";
-          ctx.shadowBlur = 6;
-          ctx.fillStyle = "rgba(255,255,255,0.85)";
-          ctx.fillText(watermarkText, W - 16, H - 14);
-          ctx.shadowBlur = 0;
+          // Shadow
+          ctx.fillStyle = "rgba(0,0,0,0.6)";
+          ctx.fillText(wm, W - 14, H - 12);
+          // White text
+          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          ctx.fillText(wm, W - 15, H - 13);
+          ctx.restore();
 
           requestAnimationFrame(drawFrame);
         };
 
-        vid.addEventListener("play", drawFrame, { once: true });
-        vid.play().catch(reject);
+        vid.addEventListener(
+          "playing",
+          () => requestAnimationFrame(drawFrame),
+          { once: true },
+        );
+        vid.addEventListener("ended", finish, { once: true });
+
+        vid.play().catch((err) => {
+          clearTimeout(safetyTimer);
+          cleanup();
+          reject(err);
+        });
       });
 
-      vid.addEventListener("error", reject);
+      vid.addEventListener("error", (e) => {
+        clearTimeout(safetyTimer);
+        cleanup();
+        reject(new Error("Video load error: " + (e.message || "unknown")));
+      });
     });
   };
 
-  // Share an entry's full video (with watermark) from the three-dot menu
   const shareEntryVideo = async (entry, target) => {
     setShareEntry(entry);
     setShareStep("building");
@@ -932,7 +939,6 @@ export default function WMX() {
           return;
         } catch {}
       }
-      // Desktop fallback: download + open platform
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = fileName;
@@ -955,7 +961,6 @@ export default function WMX() {
     }
   };
 
-  // Share the last-30s clip (with watermark) — upgraded version of shareClip
   const shareClipWatermarked = async (target) => {
     const raw = clipBlob || (await buildClip());
     if (!raw) return;
@@ -1005,9 +1010,7 @@ export default function WMX() {
     }
   };
 
-  // Audio convert from a specific playlist entry (not just the current one)
   const convertEntryToAudio = async (entry) => {
-    // Switch to that entry first so the converter modal shows its name
     const idx = playlist.indexOf(entry);
     if (idx !== -1) setCurrentIndex(idx);
     setShowConverter(true);
@@ -1057,22 +1060,13 @@ export default function WMX() {
 
   const searchSubtitles = async () => {
     if (!currentEntry) return;
-    if (!osKey) {
-      setSubError("OpenSubtitles API key not configured.");
-      return;
-    }
     setSubSearching(true);
     setSubError("");
     setSubResults([]);
     try {
       const res = await fetch(
         `https://api.opensubtitles.com/api/v1/subtitles?query=${encodeURIComponent(currentEntry.title)}&languages=en`,
-        {
-          headers: {
-            "Api-Key": osKey,
-            "User-Agent": "react-video-player v1.0",
-          },
-        },
+        { headers: { "Api-Key": "", "User-Agent": "react-video-player v1.0" } },
       );
       if (!res.ok) throw new Error(`${res.status}`);
       const data = await res.json();
@@ -1095,7 +1089,7 @@ export default function WMX() {
       const res = await fetch("https://api.opensubtitles.com/api/v1/download", {
         method: "POST",
         headers: {
-          "Api-Key": osKey,
+          "Api-Key": "",
           "Content-Type": "application/json",
           "User-Agent": "react-video-player v1.0",
         },
@@ -1143,9 +1137,8 @@ export default function WMX() {
       const wavBlob = audioBufferToWav(audioBuf);
       setConvertProgress(95);
       const url = URL.createObjectURL(wavBlob);
-      const name = `${currentEntry?.title || "audio"}.wav`;
       setConvertedUrl(url);
-      setConvertedName(name);
+      setConvertedName(`${currentEntry?.title || "audio"}.wav`);
       setConvertProgress(100);
       setConvertStatus("done");
     } catch (err) {
@@ -1187,19 +1180,11 @@ export default function WMX() {
   const playBigSize = isMobile ? 64 : 72;
   const playlistVisible = showPlaylist && playlist.length > 0;
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // ADJUSTMENT POINT 2 — Mobile playlist bottom sheet
-  //
-  // `bottom` is set to BOTTOMBAR_H so the sheet slides up from just above
-  // your bottom tab-bar instead of from the very edge of the screen.
-  //
-  // If you have no bottom bar keep BOTTOMBAR_H = 0.
-  // ───────────────────────────────────────────────────────────────────────────
   const sidebarStyle = isMobile
     ? {
         ...S.sidebar,
         position: "fixed",
-        bottom: BOTTOMBAR_H, // ← sits above your bottom tab-bar
+        bottom: BOTTOMBAR_H,
         left: 0,
         right: 0,
         width: "100%",
@@ -1393,7 +1378,6 @@ export default function WMX() {
             <p style={S.emptyHint}>
               Reconnecting to "{folderName || "last folder"}"…
             </p>
-            {/* Cancel button — aborts file reading + thumbnail generation immediately */}
             <button
               style={S.cancelRestoreBtn}
               onClick={cancelRestore}
@@ -1407,9 +1391,9 @@ export default function WMX() {
                 ...S.emptyHint,
                 fontSize: 11,
                 marginTop: -8,
-                marginRight: 0,
                 marginBottom: 0,
                 marginLeft: 0,
+                marginRight: 0,
               }}
             >
               Cancels the reconnect and clears the saved folder.
@@ -1419,7 +1403,14 @@ export default function WMX() {
           <div style={S.empty}>
             <button style={S.openBtn} onClick={reconnectFolder} type="button">
               <FontAwesomeIcon icon={faFolder} />
-              <span style={{ marginLeft: 10 }}>
+              <span
+                style={{
+                  marginLeft: 10,
+                  marginBottom: 0,
+                  marginTop: 0,
+                  marginRight: 0,
+                }}
+              >
                 Reconnect to "{folderName}"
               </span>
             </button>
@@ -1437,11 +1428,23 @@ export default function WMX() {
               style={{
                 ...S.openBtn,
                 marginTop: 12,
+                marginBottom: 0,
+                marginLeft: 0,
+                marginRight: 0,
               }}
               onClick={() => videoInput.current?.click()}
             >
               <FontAwesomeIcon icon={faFilm} />
-              <span style={{ marginLeft: 10 }}>Select A Video</span>
+              <span
+                style={{
+                  marginLeft: 10,
+                  marginBottom: 0,
+                  marginTopt: 0,
+                  marginRight: 0,
+                }}
+              >
+                Select A Video
+              </span>
             </button>
 
             <input
@@ -1453,7 +1456,16 @@ export default function WMX() {
             />
             <FolderPicker style={S.openBtn}>
               <FontAwesomeIcon icon={faFolder} />
-              <span style={{ marginLeft: 10 }}>Open Folder</span>
+              <span
+                style={{
+                  marginLeft: 10,
+                  marginBottom: 0,
+                  marginLeft: 0,
+                  marginRight: 0,
+                }}
+              >
+                Open Folder
+              </span>
             </FolderPicker>
             <p style={S.emptyHint}>
               {supportsFSAccess
@@ -1513,7 +1525,6 @@ export default function WMX() {
               style={{ ...S.overlay, opacity: showControls ? 1 : 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Title bar */}
               <div
                 style={{
                   ...S.titleBar,
@@ -1532,7 +1543,6 @@ export default function WMX() {
                 </FolderPicker>
               </div>
 
-              {/* Centre */}
               <div style={{ ...S.centerRow, gap: isMobile ? 20 : 32 }}>
                 <button
                   style={{
@@ -1543,7 +1553,15 @@ export default function WMX() {
                   onClick={() => skip(-10)}
                 >
                   <FontAwesomeIcon icon={faRotateLeft} />
-                  <span style={{ marginLeft: 4, fontSize: isMobile ? 11 : 13 }}>
+                  <span
+                    style={{
+                      marginLeft: 4,
+                      marginBottom: 0,
+                      marginTop: 0,
+                      marginRight: 0,
+                      fontSize: isMobile ? 11 : 13,
+                    }}
+                  >
                     10
                   </span>
                 </button>
@@ -1570,7 +1588,13 @@ export default function WMX() {
                   onClick={() => skip(10)}
                 >
                   <span
-                    style={{ marginRight: 4, fontSize: isMobile ? 11 : 13 }}
+                    style={{
+                      marginRight: 4,
+                      marginBottom: 0,
+                      marginLeft: 0,
+                      marginTop: 0,
+                      fontSize: isMobile ? 11 : 13,
+                    }}
                   >
                     10
                   </span>
@@ -1578,7 +1602,6 @@ export default function WMX() {
                 </button>
               </div>
 
-              {/* Bottom bar */}
               <div
                 style={{ padding: isMobile ? "0 12px 12px" : "0 24px 24px" }}
               >
@@ -1695,8 +1718,10 @@ export default function WMX() {
                     </span>
                   </div>
 
-                  <div style={{ ...S.ctrlRight, gap: isMobile ? 2 : 6 }}>
-                    {/* Screenshot */}
+                  <div
+                    className={second - icon}
+                    style={{ ...S.ctrlRight, gap: isMobile ? 2 : 6 }}
+                  >
                     <div style={{ position: "relative" }}>
                       <button
                         style={{
@@ -1719,20 +1744,37 @@ export default function WMX() {
                           />
                           <button style={S.popItem} onClick={downloadShot}>
                             <FontAwesomeIcon icon={faDownload} />
-                            <span style={{ marginLeft: 8 }}>Download</span>
+                            <span
+                              style={{
+                                marginLeft: 8,
+                                marginBottom: 0,
+                                marginTop: 0,
+                                marginRight: 0,
+                              }}
+                            >
+                              Download
+                            </span>
                           </button>
                           <button
                             style={S.popItem}
                             onClick={() => setShotUrl(null)}
                           >
                             <FontAwesomeIcon icon={faXmark} />
-                            <span style={{ marginLeft: 8 }}>Close</span>
+                            <span
+                              style={{
+                                marginLeft: 8,
+                                marginBottom: 0,
+                                marginTop: 0,
+                                marginRight: 0,
+                              }}
+                            >
+                              Close
+                            </span>
                           </button>
                         </div>
                       )}
                     </div>
 
-                    {/* Share */}
                     <div style={{ position: "relative" }}>
                       <button
                         style={{
@@ -1765,11 +1807,35 @@ export default function WMX() {
                             </div>
                           )}
                           <button
+                            style={{
+                              position: "absolute",
+                              right: "5px",
+                              top: "1px",
+                              background: "none",
+                              color: "white",
+                              border: "1px solid white",
+                              borderRadius: "50%",
+                              padding: "4px 6px",
+                            }}
+                            onClick={() => setShowShareMenu((v) => !v)}
+                          >
+                            X
+                          </button>
+                          <button
                             style={S.popItem}
                             onClick={() => shareClipWatermarked("whatsapp")}
                           >
                             <FontAwesomeIcon icon={faWhatsapp} />
-                            <span style={{ marginLeft: 8 }}>WhatsApp</span>
+                            <span
+                              style={{
+                                marginLeft: 8,
+                                marginBottom: 0,
+                                marginLeft: 0,
+                                marginRight: 0,
+                              }}
+                            >
+                              WhatsApp
+                            </span>
                           </button>
                           <button
                             style={S.popItem}
@@ -1789,7 +1855,6 @@ export default function WMX() {
                       )}
                     </div>
 
-                    {/* Subtitles */}
                     <div style={{ position: "relative" }}>
                       <button
                         style={{
@@ -1812,6 +1877,21 @@ export default function WMX() {
                           }}
                         >
                           <div style={S.popLabel}>Subtitles</div>
+                          <button
+                            style={{
+                              position: "absolute",
+                              right: "6px",
+                              top: "2px",
+                              background: "none",
+                              color: "white",
+                              border: "1px solid white",
+                              borderRadius: "50%",
+                              padding: "4px 7px",
+                            }}
+                            onClick={() => setShowSubMenu((v) => !v)}
+                          >
+                            X
+                          </button>
                           {subtitleUrl && (
                             <button
                               style={S.popItem}
@@ -1878,7 +1958,6 @@ export default function WMX() {
                       )}
                     </div>
 
-                    {/* Rotate */}
                     <button
                       style={{
                         ...S.ctrlBtn,
@@ -1892,7 +1971,6 @@ export default function WMX() {
                       <FontAwesomeIcon icon={faRepeat} />
                     </button>
 
-                    {/* Audio converter */}
                     <button
                       style={{
                         ...S.ctrlBtn,
@@ -1906,7 +1984,6 @@ export default function WMX() {
                       <FontAwesomeIcon icon={faMusic} />
                     </button>
 
-                    {/* Quality */}
                     {currentEntry?.sources.length > 1 && (
                       <div style={{ position: "relative" }}>
                         <button
@@ -1957,7 +2034,6 @@ export default function WMX() {
                       </div>
                     )}
 
-                    {/* Speed */}
                     <div style={{ position: "relative" }}>
                       <button
                         style={{
@@ -1992,7 +2068,6 @@ export default function WMX() {
                       )}
                     </div>
 
-                    {/* Fullscreen */}
                     <button
                       style={{
                         ...S.ctrlBtn,
@@ -2015,7 +2090,6 @@ export default function WMX() {
         )}
       </div>
 
-      {/* Playlist / bottom sheet */}
       {playlist.length > 0 && (
         <div style={sidebarStyle}>
           {isMobile && (
@@ -2061,7 +2135,6 @@ export default function WMX() {
                   if (isMobile) setShowPlaylist(false);
                 }}
               >
-                {/* Thumbnail */}
                 <div
                   style={{
                     ...S.thumbWrap,
@@ -2086,7 +2159,6 @@ export default function WMX() {
                   )}
                 </div>
 
-                {/* Title + meta */}
                 <div style={S.itemBody}>
                   <div
                     style={{
@@ -2103,7 +2175,6 @@ export default function WMX() {
                   </div>
                 </div>
 
-                {/* Three-dot button */}
                 <button
                   style={S.dotBtn}
                   title="More options"
@@ -2115,10 +2186,8 @@ export default function WMX() {
                   <FontAwesomeIcon icon={faEllipsisVertical} />
                 </button>
 
-                {/* Context menu */}
                 {itemMenuId === p.id && (
                   <div style={S.itemMenu} onClick={(e) => e.stopPropagation()}>
-                    {/* Convert to audio */}
                     <button
                       style={S.itemMenuItem}
                       onClick={() => {
@@ -2135,7 +2204,6 @@ export default function WMX() {
 
                     <div style={S.itemMenuDivider} />
 
-                    {/* Video details */}
                     <button
                       style={S.itemMenuItem}
                       onClick={() => {
@@ -2155,7 +2223,6 @@ export default function WMX() {
 
                     <div style={S.itemMenuDivider} />
 
-                    {/* Share video — sub-items inline */}
                     <div style={{ padding: "8px 14px 4px" }}>
                       <div
                         style={{
@@ -2216,23 +2283,35 @@ export default function WMX() {
                       </div>
                     </div>
 
-                    {/* Watermark label editor */}
                     <div style={{ padding: "8px 14px 10px" }}>
                       <div style={{ ...S.itemMenuSub, marginBottom: 4 }}>
                         <FontAwesomeIcon
                           icon={faStamp}
                           style={{ marginRight: 5 }}
                         />
-                        Watermark text
+                        Watermark text (custom part)
                       </div>
                       <input
                         style={S.wmInput}
-                        value={watermarkText}
-                        maxLength={40}
-                        onChange={(e) => setWatermarkText(e.target.value)}
+                        value={watermarkCustom}
+                        maxLength={30}
+                        onChange={(e) => setWatermarkCustom(e.target.value)}
                         onClick={(e) => e.stopPropagation()}
-                        placeholder="Your watermark…"
+                        placeholder="Your name or brand…"
                       />
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "rgba(255,255,255,0.3)",
+                          marginTop: 4,
+                        }}
+                      >
+                        Full watermark: "
+                        <strong style={{ color: "rgba(255,255,255,0.5)" }}>
+                          {fullWatermark(watermarkCustom)}
+                        </strong>
+                        "
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2251,7 +2330,6 @@ export default function WMX() {
         </div>
       )}
 
-      {/* ── Video Detail Modal ── */}
       {detailEntry && (
         <div style={S.modalBackdrop} onClick={() => setDetailEntry(null)}>
           <div
@@ -2323,14 +2401,29 @@ export default function WMX() {
                 <div style={S.detailRow}>
                   <FontAwesomeIcon icon={faStamp} style={S.detailIcon} />
                   <div>
-                    <div style={S.detailLabel}>Watermark Text</div>
+                    <div style={S.detailLabel}>
+                      Watermark Text (custom part)
+                    </div>
                     <input
                       style={{ ...S.wmInput, marginTop: 4, width: "100%" }}
-                      value={watermarkText}
-                      maxLength={40}
-                      onChange={(e) => setWatermarkText(e.target.value)}
-                      placeholder="Your watermark…"
+                      value={watermarkCustom}
+                      maxLength={30}
+                      onChange={(e) => setWatermarkCustom(e.target.value)}
+                      placeholder="Your name or brand…"
                     />
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: "rgba(255,255,255,0.3)",
+                        marginTop: 4,
+                      }}
+                    >
+                      Full watermark: "
+                      <strong style={{ color: "rgba(255,255,255,0.5)" }}>
+                        {fullWatermark(watermarkCustom)}
+                      </strong>
+                      "
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2339,7 +2432,6 @@ export default function WMX() {
         </div>
       )}
 
-      {/* ── Share Progress Modal (watermark encoding in progress) ── */}
       {shareEntry && shareStep !== "idle" && (
         <div
           style={S.modalBackdrop}
@@ -2448,9 +2540,11 @@ export default function WMX() {
               </div>
               <p style={S.converterNote}>
                 The watermark "
-                <strong style={{ color: "#fff" }}>{watermarkText}</strong>" is
-                burned into the bottom-right corner of every frame. No data is
-                uploaded — everything happens in your browser.
+                <strong style={{ color: "#fff" }}>
+                  {fullWatermark(watermarkCustom)}
+                </strong>
+                " is burned into the bottom-right corner of every frame. No data
+                is uploaded — everything happens in your browser.
               </p>
             </div>
           </div>
@@ -2460,31 +2554,11 @@ export default function WMX() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────────────────────
 const S = {
   root: {
     display: "flex",
     width: "100%",
-
-    // ─────────────────────────────────────────────────────────────────────
-    // ADJUSTMENT POINT 3 — Root container height
-    //
-    // We subtract both NAVBAR_H and BOTTOMBAR_H so the player occupies only
-    // the space between your top navbar and bottom tab-bar.
-    //
-    // `100dvh` = dynamic viewport height (accounts for mobile browser chrome
-    // collapsing/expanding). Falls back to `100vh` in older browsers.
-    //
-    // If you use `100%` height on your parent div instead, change this to:
-    //   height: `calc(100% - ${NAVBAR_H + BOTTOMBAR_H}px)`
-    //
-    // Or if your layout already constrains the height of the parent:
-    //   height: "100%"   ← and delete the calc entirely
-    // ─────────────────────────────────────────────────────────────────────
     height: `calc(100dvh - ${NAVBAR_H + BOTTOMBAR_H}px)`,
-
     background: "var(--bg-main, #0f0f0f)",
     fontFamily: "var(--font-body, system-ui, sans-serif)",
     overflow: "hidden",
@@ -2549,10 +2623,7 @@ const S = {
   emptyHint: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 13,
-    marginTop: 0,
-    marginBottom: 0,
-    marginRight: 0,
-    marginLeft: 0,
+    margin: 0,
     maxWidth: 260,
   },
   player: {
@@ -2911,6 +2982,112 @@ const S = {
     flexShrink: 0,
     WebkitTapHighlightColor: "transparent",
   },
+  dotBtn: {
+    flexShrink: 0,
+    background: "none",
+    border: "none",
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 16,
+    cursor: "pointer",
+    padding: "6px 8px",
+    borderRadius: 6,
+    WebkitTapHighlightColor: "transparent",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemMenu: {
+    position: "absolute",
+    right: 8,
+    top: "100%",
+    zIndex: 30,
+    background: "rgba(14,20,32,0.98)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 12,
+    padding: "6px 0",
+    minWidth: 230,
+    boxShadow: "0 16px 48px rgba(0,0,0,0.75)",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
+  },
+  itemMenuItem: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+    width: "100%",
+    padding: "10px 14px",
+    background: "none",
+    border: "none",
+    color: "#fff",
+    cursor: "pointer",
+    textAlign: "left",
+    WebkitTapHighlightColor: "transparent",
+  },
+  itemMenuIcon: {
+    color: "var(--primary-color,#3390ec)",
+    fontSize: 15,
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  itemMenuLabel: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#fff",
+    lineHeight: 1.3,
+  },
+  itemMenuSub: { fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 },
+  itemMenuDivider: {
+    height: 1,
+    background: "rgba(255,255,255,0.07)",
+    margin: "4px 0",
+  },
+  shareChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "5px 10px",
+    borderRadius: 20,
+    fontSize: 11,
+    fontWeight: 600,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(255,255,255,0.06)",
+    color: "#fff",
+    cursor: "pointer",
+    WebkitTapHighlightColor: "transparent",
+    whiteSpace: "nowrap",
+  },
+  wmInput: {
+    width: "100%",
+    padding: "7px 10px",
+    borderRadius: 6,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(255,255,255,0.06)",
+    color: "#fff",
+    fontSize: 12,
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  detailGrid: { display: "flex", flexDirection: "column", gap: 12 },
+  detailRow: { display: "flex", alignItems: "flex-start", gap: 12 },
+  detailIcon: {
+    color: "var(--primary-color,#3390ec)",
+    fontSize: 14,
+    marginTop: 3,
+    flexShrink: 0,
+    width: 16,
+  },
+  detailLabel: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.4)",
+    textTransform: "uppercase",
+    letterSpacing: "0.6px",
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 13,
+    color: "#fff",
+    fontWeight: 500,
+    wordBreak: "break-all",
+  },
   modalBackdrop: {
     position: "fixed",
     inset: 0,
@@ -2992,121 +3169,5 @@ const S = {
     border: "none",
     cursor: "pointer",
     WebkitTapHighlightColor: "transparent",
-  },
-
-  // ── Three-dot button on playlist item ──
-  dotBtn: {
-    flexShrink: 0,
-    background: "none",
-    border: "none",
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 16,
-    cursor: "pointer",
-    padding: "6px 8px",
-    borderRadius: 6,
-    WebkitTapHighlightColor: "transparent",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  // ── Item context menu ──
-  itemMenu: {
-    position: "absolute",
-    right: 8,
-    top: "100%",
-    zIndex: 30,
-    background: "rgba(14,20,32,0.98)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    padding: "6px 0",
-    minWidth: 230,
-    boxShadow: "0 16px 48px rgba(0,0,0,0.75)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-  },
-  itemMenuItem: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 12,
-    width: "100%",
-    padding: "10px 14px",
-    background: "none",
-    border: "none",
-    color: "#fff",
-    cursor: "pointer",
-    textAlign: "left",
-    WebkitTapHighlightColor: "transparent",
-  },
-  itemMenuIcon: {
-    color: "var(--primary-color,#3390ec)",
-    fontSize: 15,
-    marginTop: 2,
-    flexShrink: 0,
-  },
-  itemMenuLabel: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#fff",
-    lineHeight: 1.3,
-  },
-  itemMenuSub: { fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 },
-  itemMenuDivider: {
-    height: 1,
-    background: "rgba(255,255,255,0.07)",
-    margin: "4px 0",
-  },
-
-  // ── Share platform chips (compact) ──
-  shareChip: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "5px 10px",
-    borderRadius: 20,
-    fontSize: 11,
-    fontWeight: 600,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.06)",
-    color: "#fff",
-    cursor: "pointer",
-    WebkitTapHighlightColor: "transparent",
-    whiteSpace: "nowrap",
-  },
-
-  // ── Watermark text input ──
-  wmInput: {
-    width: "100%",
-    padding: "7px 10px",
-    borderRadius: 6,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.06)",
-    color: "#fff",
-    fontSize: 12,
-    outline: "none",
-    boxSizing: "border-box",
-  },
-
-  // ── Video detail modal ──
-  detailGrid: { display: "flex", flexDirection: "column", gap: 12 },
-  detailRow: { display: "flex", alignItems: "flex-start", gap: 12 },
-  detailIcon: {
-    color: "var(--primary-color,#3390ec)",
-    fontSize: 14,
-    marginTop: 3,
-    flexShrink: 0,
-    width: 16,
-  },
-  detailLabel: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase",
-    letterSpacing: "0.6px",
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontSize: 13,
-    color: "#fff",
-    fontWeight: 500,
-    wordBreak: "break-all",
   },
 };
