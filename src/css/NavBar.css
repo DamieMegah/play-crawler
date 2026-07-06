@@ -150,19 +150,21 @@
 }
 
       .mobile-search-trigger {
-      cursor: pointer;
       padding: 10px; 
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 2rem;
-       transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
        position: fixed;
         right: 0.45rem;
         top: 1rem;
         z-index: 1002;
     }
-
+.icon-search, .about{
+     color: var(--text-main);
+     transform: scale(1.2);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
     
       .mobile-back-trigger {
         cursor: pointer;
@@ -190,10 +192,9 @@
 }
 
 
-.icon-search, .icon-back{
+ .icon-back{
  color: var(--text-main);
  transform: scale(1.2);
-
 }
 
 

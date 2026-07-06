@@ -6,16 +6,13 @@ import SearchBar from "./SearchBar.jsx";
 import { useMovieContext } from "../contexts/MovieContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faHome,
   faFilm,
   faHeart,
   faSearch,
   faArrowLeftLong,
   faPlay,
   faFire,
-  faEllipsis,
-  faDownload,
-  faEllipsisVertical,
+  faCompass,
 } from "@fortawesome/free-solid-svg-icons";
 
 function Navbar({ isScrolled }) {
@@ -83,15 +80,16 @@ function Navbar({ isScrolled }) {
             className="icon-search"
             onClick={handleSearchIcon}
           />
-          <NavLink to="/about" style={{ zIndex: "10003" }}>
+          <NavLink
+            to="/about"
+            style={({ isActive }) => ({
+              zIndex: "10003",
+              display: isActive ? "none" : "block", // or "inline-block" / "flex" depending on your layout
+            })}
+            className={({ isActive }) => (isActive ? "" : "icon-default")}
+          >
             <span>
-              <FontAwesomeIcon
-                icon={faEllipsisVertical}
-                style={{
-                  color: "white",
-                  fontSize: "24px",
-                }}
-              />
+              <FontAwesomeIcon icon={faCompass} spin />
             </span>
           </NavLink>
         </div>
