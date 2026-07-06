@@ -176,7 +176,7 @@
   height: 100%;
 }
 
-.inline-trailer-wrapper iframe {
+.inline-trailer-wrapper iframe{
   width: 100%;
   height: 100%;
   border: none;
@@ -251,7 +251,7 @@ transform-origin: top right;
   }
   
   .movie-grid-animated {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
     gap: 20px;
   }
 
@@ -271,4 +271,11 @@ transform-origin: top right;
     opacity: 1;
   }
 
+}
+
+@media (max-width:380px) {
+  
+  .movie-grid-animated {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
 }

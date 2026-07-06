@@ -143,6 +143,34 @@ function audioBufferToWav(buffer) {
   return new Blob([arrayBuffer], { type: "audio/wav" });
 }
 
+// Module-level store: lives outside React's component lifecycle, so it
+// survives the VideoPlayer unmounting and remounting (navigating to another
+// tab/route in the app and coming back). Only a hard page reload clears it.
+// This is what lets "leaving the page" just pause playback instead of
+// wiping the playlist, position, and settings.
+const sessionStore = {
+  playlist: [],
+  currentIndex: -1,
+  currentTime: 0,
+  volume: 1,
+  muted: false,
+  playbackRate: 1,
+  activeQuality: null,
+  rotation: 0,
+  folderName: "",
+  subtitleUrl: null,
+  subtitlesOn: true,
+  watermarkCustom: "My Video",
+  dirHandle: null,
+};
+
+const revokeEntries = (entries) => {
+  entries.forEach((p) => {
+    p.sources.forEach((s) => URL.revokeObjectURL(s.url));
+    if (p.thumb) URL.revokeObjectURL(p.thumb);
+  });
+};
+
 export default function VideoPlayer() {
   const videoInput = useRef(null);
   const videoRef = useRef(null);
@@ -154,38 +182,44 @@ export default function VideoPlayer() {
   const trackUrlRef = useRef(null);
   const autoplayNextRef = useRef(false);
   const restoreAbortRef = useRef(null);
+  const hasResumedRef = useRef(false);
 
   const winW = useWindowWidth();
   const isMobile = winW < 640;
 
-  const [currentIndex, setCurrentIndex] = useState(-1);
+  const hasSession = sessionStore.playlist.length > 0;
+
+  const [currentIndex, setCurrentIndex] = useState(sessionStore.currentIndex);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(sessionStore.currentTime);
   const [buffered, setBuffered] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [muted, setMuted] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  const [volume, setVolume] = useState(sessionStore.volume);
+  const [muted, setMuted] = useState(sessionStore.muted);
+  const [playbackRate, setPlaybackRate] = useState(sessionStore.playbackRate);
   const [fullscreen, setFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
-  const [playlist, setPlaylist] = useState([]);
-  const [showPlaylist, setShowPlaylist] = useState(true);
-  const [folderName, setFolderName] = useState("");
+  const [playlist, setPlaylist] = useState(sessionStore.playlist);
+  const [showPlaylist, setShowPlaylist] = useState(!hasSession);
+  const [folderName, setFolderName] = useState(sessionStore.folderName);
   const [needsReconnect, setNeedsReconnect] = useState(false);
-  const [restoring, setRestoring] = useState(supportsFSAccess);
-  const [rotation, setRotation] = useState(0);
-  const [activeQuality, setActiveQuality] = useState(null);
+  const [restoring, setRestoring] = useState(supportsFSAccess && !hasSession);
+  const [rotation, setRotation] = useState(sessionStore.rotation);
+  const [activeQuality, setActiveQuality] = useState(
+    sessionStore.activeQuality,
+  );
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [clipBlob, setClipBlob] = useState(null);
   const [clipBusy, setClipBusy] = useState(false);
   const [shotUrl, setShotUrl] = useState(null);
-  const [subtitleUrl, setSubtitleUrl] = useState(null);
-  const [subtitlesOn, setSubtitlesOn] = useState(true);
+  const [subtitleUrl, setSubtitleUrl] = useState(sessionStore.subtitleUrl);
+  const [subtitlesOn, setSubtitlesOn] = useState(sessionStore.subtitlesOn);
   const [showSubMenu, setShowSubMenu] = useState(false);
   const [subSearching, setSubSearching] = useState(false);
+  const [subQuery, setSubQuery] = useState("");
   const [subResults, setSubResults] = useState([]);
   const [subError, setSubError] = useState("");
   const [showConverter, setShowConverter] = useState(false);
@@ -200,9 +234,11 @@ export default function VideoPlayer() {
   const [shareEntry, setShareEntry] = useState(null);
   const [shareStep, setShareStep] = useState("idle");
   const [shareUrl, setShareUrl] = useState(null);
-  const [watermarkCustom, setWatermarkCustom] = useState("My Video");
+  const [watermarkCustom, setWatermarkCustom] = useState(
+    sessionStore.watermarkCustom,
+  );
 
-  const dirHandleRef = useRef(null);
+  const dirHandleRef = useRef(sessionStore.dirHandle);
   const currentEntry = playlist[currentIndex] ?? null;
   const currentSource = currentEntry
     ? currentEntry.sources.find((s) => s.quality === activeQuality) ||
@@ -214,15 +250,6 @@ export default function VideoPlayer() {
     const trimmed = custom.trim();
     return trimmed ? `${trimmed} | via impx` : "via impx";
   };
-
-  useEffect(() => {
-    return () => {
-      playlist.forEach((p) => {
-        p.sources.forEach((s) => URL.revokeObjectURL(s.url));
-        if (p.thumb) URL.revokeObjectURL(p.thumb);
-      });
-    };
-  }, [playlist]);
 
   const buildPlaylist = async (files, signal) => {
     const sorted = [...files]
@@ -328,6 +355,7 @@ export default function VideoPlayer() {
   };
 
   useEffect(() => {
+    if (hasSession) return setRestoring(false);
     if (!supportsFSAccess) return setRestoring(false);
     const ctrl = new AbortController();
     restoreAbortRef.current = ctrl;
@@ -370,16 +398,79 @@ export default function VideoPlayer() {
     return () => ctrl.abort();
   }, []);
 
+  // Keep the module-level store in sync so a later remount can pick up
+  // exactly where this one left off.
+  useEffect(() => {
+    sessionStore.playlist = playlist;
+    sessionStore.currentIndex = currentIndex;
+    sessionStore.volume = volume;
+    sessionStore.muted = muted;
+    sessionStore.playbackRate = playbackRate;
+    sessionStore.activeQuality = activeQuality;
+    sessionStore.rotation = rotation;
+    sessionStore.folderName = folderName;
+    sessionStore.subtitleUrl = subtitleUrl;
+    sessionStore.subtitlesOn = subtitlesOn;
+    sessionStore.watermarkCustom = watermarkCustom;
+    sessionStore.dirHandle = dirHandleRef.current;
+  }, [
+    playlist,
+    currentIndex,
+    volume,
+    muted,
+    playbackRate,
+    activeQuality,
+    rotation,
+    folderName,
+    subtitleUrl,
+    subtitlesOn,
+    watermarkCustom,
+  ]);
+
+  // Leaving the page (switching tabs) should only pause — never reset.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) videoRef.current?.pause();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  // Unmounting (navigating away within the app) should also just pause —
+  // the playlist/position live in sessionStore, not in this component, so
+  // there's nothing to tear down here.
+  useEffect(() => {
+    return () => {
+      videoRef.current?.pause();
+    };
+  }, []);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !currentSource) return;
     const t = video.currentTime;
     video.src = currentSource.url;
     video.load();
-    if (!autoplayNextRef.current) {
+    if (!hasResumedRef.current && sessionStore.currentTime > 0) {
+      // First load after a remount with a live session: resume position,
+      // but stay paused — leaving the page should only pause, not restart.
+      hasResumedRef.current = true;
+      const resumeTime = sessionStore.currentTime;
+      setPlaying(false);
+      video.addEventListener(
+        "loadedmetadata",
+        () => {
+          video.currentTime = resumeTime;
+          setCurrentTime(resumeTime);
+        },
+        { once: true },
+      );
+    } else if (!autoplayNextRef.current) {
+      hasResumedRef.current = true;
       setPlaying(false);
       setCurrentTime(0);
     } else {
+      hasResumedRef.current = true;
       video.addEventListener(
         "loadedmetadata",
         () => {
@@ -402,7 +493,8 @@ export default function VideoPlayer() {
   useEffect(() => {
     setSubResults([]);
     setSubError("");
-  }, [currentIndex]);
+    setSubQuery(currentEntry?.title ?? "");
+  }, [currentIndex, currentEntry]);
 
   useEffect(() => {
     if (!autoplayNextRef.current) return;
@@ -422,6 +514,8 @@ export default function VideoPlayer() {
 
     const entries = await buildPlaylist([file]);
 
+    revokeEntries(playlist);
+    hasResumedRef.current = true;
     setPlaylist(entries);
     setCurrentIndex(0);
     setActiveQuality(entries[0]?.sources[0]?.quality ?? null);
@@ -448,6 +542,7 @@ export default function VideoPlayer() {
     const onPause = () => setPlaying(false);
     const onTime = () => {
       setCurrentTime(video.currentTime);
+      sessionStore.currentTime = video.currentTime;
       if (video.buffered.length)
         setBuffered(video.buffered.end(video.buffered.length - 1));
     };
@@ -618,6 +713,8 @@ export default function VideoPlayer() {
     const files = [...e.target.files];
     if (!files.length) return;
     const entries = await buildPlaylist(files);
+    revokeEntries(playlist);
+    hasResumedRef.current = true;
     setPlaylist(entries);
     setCurrentIndex(0);
     setActiveQuality(entries[0]?.sources[0]?.quality ?? null);
@@ -633,6 +730,8 @@ export default function VideoPlayer() {
       setFolderName(handle.name);
       const files = await readDirHandle(handle);
       const entries = await buildPlaylist(files);
+      revokeEntries(playlist);
+      hasResumedRef.current = true;
       setPlaylist(entries);
       setCurrentIndex(0);
       setActiveQuality(entries[0]?.sources[0]?.quality ?? null);
@@ -647,6 +746,8 @@ export default function VideoPlayer() {
     if (perm === "granted") {
       const files = await readDirHandle(handle);
       const entries = await buildPlaylist(files);
+      revokeEntries(playlist);
+      hasResumedRef.current = true;
       setPlaylist(entries);
       setCurrentIndex(0);
       setActiveQuality(entries[0]?.sources[0]?.quality ?? null);
@@ -837,7 +938,28 @@ export default function VideoPlayer() {
 
         let stream;
         try {
-          stream = canvas.captureStream(30);
+          const canvasStream = canvas.captureStream(30);
+          // vid.muted only silences local playback — the captured stream
+          // still carries the real decoded audio, so grab its audio
+          // track(s) and merge them with the canvas's video track.
+          let audioTracks = [];
+          try {
+            const audioSourceStream =
+              typeof vid.captureStream === "function"
+                ? vid.captureStream()
+                : typeof vid.mozCaptureStream === "function"
+                  ? vid.mozCaptureStream()
+                  : null;
+            if (audioSourceStream)
+              audioTracks = audioSourceStream.getAudioTracks();
+          } catch {
+            // No audio track available (e.g. silent video or unsupported
+            // browser) — fall back to video-only, same as before.
+          }
+          stream = new MediaStream([
+            ...canvasStream.getVideoTracks(),
+            ...audioTracks,
+          ]);
         } catch (err) {
           cleanup();
           clearTimeout(safetyTimer);
@@ -1055,14 +1177,19 @@ export default function VideoPlayer() {
   };
 
   const searchSubtitles = async () => {
-    if (!currentEntry) return;
+    if (!subQuery.trim()) return;
     setSubSearching(true);
     setSubError("");
     setSubResults([]);
     try {
       const res = await fetch(
-        `https://api.opensubtitles.com/api/v1/subtitles?query=${encodeURIComponent(currentEntry.title)}&languages=en`,
-        { headers: { "Api-Key": "", "User-Agent": "react-video-player v1.0" } },
+        `https://api.opensubtitles.com/api/v1/subtitles?query=${encodeURIComponent(subQuery.trim())}&languages=en`,
+        {
+          headers: {
+            "Api-Key": import.meta.env.VITE_OPENSUBTITLES_API_KEY,
+            "User-Agent": "react-video-player v1.0",
+          },
+        },
       );
       if (!res.ok) throw new Error(`${res.status}`);
       const data = await res.json();
@@ -1076,7 +1203,6 @@ export default function VideoPlayer() {
       setSubSearching(false);
     }
   };
-
   const downloadSubtitle = async (item) => {
     setSubError("");
     try {
@@ -1085,7 +1211,7 @@ export default function VideoPlayer() {
       const res = await fetch("https://api.opensubtitles.com/api/v1/download", {
         method: "POST",
         headers: {
-          "Api-Key": "",
+          "Api-Key": import.meta.env.VITE_OPENSUBTITLES_API_KEY,
           "Content-Type": "application/json",
           "User-Agent": "react-video-player v1.0",
         },
@@ -1648,13 +1774,56 @@ export default function VideoPlayer() {
                             />
                             <span>Search "{currentEntry?.title}"</span>
                           </button>
+
+                          {/* Search Input field element wrapper */}
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "6px",
+                              padding: "4px 8px",
+                            }}
+                          >
+                            <input
+                              type="text"
+                              className="vp-wm-input"
+                              style={{ margin: 0, flex: 1 }}
+                              value={subQuery}
+                              placeholder="Type subtitle name..."
+                              onChange={(e) => setSubQuery(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.stopPropagation();
+                                  searchSubtitles();
+                                }
+                              }}
+                            />
+                            <button
+                              className="vp-small-btn"
+                              style={{ padding: "0 10px", height: "auto" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                searchSubtitles();
+                              }}
+                              disabled={subSearching || !subQuery.trim()}
+                              title="Search Subtitles"
+                            >
+                              <FontAwesomeIcon
+                                icon={
+                                  subSearching ? faSpinner : faMagnifyingGlass
+                                }
+                                spin={subSearching}
+                              />
+                            </button>
+                          </div>
+
                           {subError && (
                             <div className="vp-sub-error">{subError}</div>
                           )}
                           {subResults.map((r) => (
                             <button
                               key={r.id}
-                              className="vp-pop-item"
+                              className="sub-result"
                               onClick={() => downloadSubtitle(r)}
                             >
                               <FontAwesomeIcon icon={faDownload} />

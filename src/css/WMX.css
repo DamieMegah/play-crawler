@@ -428,19 +428,24 @@
   }
 }
 
-.vp-ctrl-left,
-.vp-ctrl-right {
+.vp-ctrl-right,
+.vp-ctrl-left{
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
 @media (max-width: 639.98px) {
-  .vp-ctrl-left,
+
   .vp-ctrl-right {
     gap: 4px;
   }
 }
+
+  .vp-ctrl-left{
+    gap :4px;
+  }
 
 .vp-ctrl-right {
   gap: 6px;
@@ -560,6 +565,7 @@
 .vp-pop-item {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
   padding: 12px 16px;
@@ -572,6 +578,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+
 
 .vp-pop-item.active {
   font-weight: 700;
@@ -614,6 +621,29 @@
   width: 100%;
   border-radius: 8px 8px 0 0;
   display: block;
+}
+
+.sub-result{
+   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  width:max-content;
+  gap: 8px;
+  padding: 12px 16px;
+  text-align: left;
+  background: var(--bg-nav);
+  border: none;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: .3s ease-in-out;
+}
+
+.sub-result:hover{
+  transform: translateY(-2px);
+  text-decoration: underline;
 }
 
 .vp-sub-error {
@@ -1287,4 +1317,20 @@
 
 .vp-wm-strong-white {
   color: #fff;
+}
+
+@media (max-width:460px) {
+   .vp-ctrl-row{
+    position: relative;
+   }
+
+   .vp-ctrl-right{
+    position: absolute;
+    flex-direction: column;
+    bottom: 5rem;
+   }
+
+   .vp-ctrl-left{
+    gap:24px;
+   }
 }
