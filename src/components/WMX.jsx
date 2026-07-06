@@ -160,7 +160,7 @@ const sessionStore = {
   folderName: "",
   subtitleUrl: null,
   subtitlesOn: true,
-  watermarkCustom: "My Video",
+  watermarkCustom: "Reels ",
   dirHandle: null,
 };
 
@@ -248,7 +248,7 @@ export default function VideoPlayer() {
   // Full watermark = custom text + immutable " | via impx" suffix
   const fullWatermark = (custom) => {
     const trimmed = custom.trim();
-    return trimmed ? `${trimmed} | via impx` : "via impx";
+    return trimmed ? `${trimmed} | via WMX` : "via WMX";
   };
 
   const buildPlaylist = async (files, signal) => {
@@ -1499,7 +1499,7 @@ export default function VideoPlayer() {
             >
               {subtitleUrl && subtitlesOn && (
                 <track
-                  kind="subtitles"
+                  kind="metadata"
                   src={subtitleUrl}
                   srcLang="en"
                   label="Subtitle"
@@ -1667,7 +1667,7 @@ export default function VideoPlayer() {
                       <button
                         className="vp-ctrl-btn"
                         onClick={() => setShowShareMenu((v) => !v)}
-                        title="Share last 30s"
+                        title="Share last 30s as reels"
                       >
                         <FontAwesomeIcon icon={faShareNodes} />
                       </button>
@@ -1749,7 +1749,9 @@ export default function VideoPlayer() {
                           )}
                           <label className="vp-pop-item">
                             <FontAwesomeIcon icon={faFilm} />
-                            <span>Upload .srt / .vtt</span>
+                            <span style={{ textDecoration: "underline" }}>
+                              Upload subtitle .srt / .vtt
+                            </span>
                             <input
                               type="file"
                               accept=".srt,.vtt"
@@ -1895,13 +1897,23 @@ export default function VideoPlayer() {
 
                     <div className="vp-dropdown-wrap">
                       <button
+                        style={{ zIndex: "1010" }}
                         className="vp-ctrl-btn vp-ctrl-btn--gear"
                         onClick={() => setShowSettings((v) => !v)}
                       >
-                        <FontAwesomeIcon icon={faGear} />
+                        <FontAwesomeIcon
+                          icon={faGear}
+                          style={{ fontSize: "1.4rem" }}
+                        />
                       </button>
                       {showSettings && (
                         <div className="vp-pop-menu">
+                          <button
+                            onClick={() => setShowSettings((v) => !v)}
+                            className="vp-pop-close vp-pop-close--wide"
+                          >
+                            X
+                          </button>
                           <div className="vp-pop-label">Playback Speed</div>
                           {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
                             <button
@@ -1932,6 +1944,8 @@ export default function VideoPlayer() {
                 </div>
               </div>
             </div>
+
+            <div className="custom-subtitle-overlay"> </div>
           </div>
         )}
       </div>
@@ -2192,7 +2206,7 @@ export default function VideoPlayer() {
                   <FontAwesomeIcon icon={faStamp} className="vp-detail-icon" />
                   <div>
                     <div className="vp-detail-label">
-                      Watermark Text (custom part)
+                      Watermark Text ( Enter custom watermark )
                     </div>
                     <input
                       className="vp-wm-input vp-wm-input--full"
@@ -2203,7 +2217,7 @@ export default function VideoPlayer() {
                     />
                     <div className="vp-wm-preview vp-wm-preview--modal">
                       Full watermark: "
-                      <strong>{fullWatermark(watermarkCustom)}</strong>"
+                      <strong>{Watermark(watermarkCustom)}</strong>"
                     </div>
                   </div>
                 </div>

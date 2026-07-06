@@ -1328,9 +1328,17 @@
     position: absolute;
     flex-direction: column;
     bottom: 5rem;
+    right: 0;
    }
 
    .vp-ctrl-left{
     gap:24px;
    }
+}
+
+
+::cue {
+  line: -3; 
+  background-color: rgba(0, 0, 0, 0.75) !important;
+  color: #ffffff !important;
 }

@@ -12,7 +12,7 @@ import {
   faArrowLeftLong,
   faPlay,
   faFire,
-  faCompass,
+  faBarsProgress,
 } from "@fortawesome/free-solid-svg-icons";
 
 function Navbar({ isScrolled }) {
@@ -89,7 +89,7 @@ function Navbar({ isScrolled }) {
             className={({ isActive }) => (isActive ? "" : "icon-default")}
           >
             <span>
-              <FontAwesomeIcon icon={faCompass} spin />
+              <FontAwesomeIcon icon={faBarsProgress} size="lg" />
             </span>
           </NavLink>
         </div>
