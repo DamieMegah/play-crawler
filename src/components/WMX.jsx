@@ -221,12 +221,15 @@ export default function VideoPlayer() {
   const [subSearching, setSubSearching] = useState(false);
   const [subQuery, setSubQuery] = useState("");
   const [subResults, setSubResults] = useState([]);
+  const [downloadingSubId, setDownloadingSubId] = useState(null);
   const [subError, setSubError] = useState("");
   const [showConverter, setShowConverter] = useState(false);
   const [convertProgress, setConvertProgress] = useState(0);
   const [convertStatus, setConvertStatus] = useState("idle");
   const [convertedUrl, setConvertedUrl] = useState(null);
   const [convertedName, setConvertedName] = useState("");
+  const trackRef = useRef(null);
+  const [activeCueText, setActiveCueText] = useState("");
 
   // Playlist item menu + detail modal + share
   const [itemMenuId, setItemMenuId] = useState(null);
@@ -353,6 +356,38 @@ export default function VideoPlayer() {
     dirHandleRef.current = null;
     idbSet(DB_KEY, null).catch(() => {});
   };
+
+  // NEW — drives the custom-subtitle-overlay div
+  useEffect(() => {
+    const trackEl = trackRef.current;
+    if (!trackEl || !subtitleUrl || !subtitlesOn) {
+      setActiveCueText("");
+      return;
+    }
+
+    const textTrack = trackEl.track;
+    if (!textTrack) return;
+
+    const updateCues = () => {
+      const cues = textTrack.activeCues;
+      if (!cues || cues.length === 0) {
+        setActiveCueText("");
+        return;
+      }
+      setActiveCueText(
+        Array.from(cues)
+          .map((c) => c.text)
+          .join("\n"),
+      );
+    };
+
+    textTrack.mode = "hidden"; // cues still fire, browser still never draws them
+    textTrack.addEventListener("cuechange", updateCues);
+    return () => {
+      textTrack.removeEventListener("cuechange", updateCues);
+      setActiveCueText("");
+    };
+  }, [subtitleUrl, subtitlesOn]);
 
   useEffect(() => {
     if (hasSession) return setRestoring(false);
@@ -1203,8 +1238,10 @@ export default function VideoPlayer() {
       setSubSearching(false);
     }
   };
+
   const downloadSubtitle = async (item) => {
     setSubError("");
+    setDownloadingSubId(item.id); //  show spinner on this item
     try {
       const fileId = item.attributes?.files?.[0]?.file_id;
       if (!fileId) throw new Error("No file id");
@@ -1230,11 +1267,14 @@ export default function VideoPlayer() {
       trackUrlRef.current = url;
       setSubtitleUrl(url);
       setSubtitlesOn(true);
+      setSubResults([]);
       setShowSubMenu(false);
     } catch {
       setSubError(
         "Couldn't download that subtitle. Try another or upload manually.",
       );
+    } finally {
+      setDownloadingSubId(null);
     }
   };
 
@@ -1499,6 +1539,7 @@ export default function VideoPlayer() {
             >
               {subtitleUrl && subtitlesOn && (
                 <track
+                  ref={trackRef} // NEW
                   kind="metadata"
                   src={subtitleUrl}
                   srcLang="en"
@@ -1822,23 +1863,34 @@ export default function VideoPlayer() {
                           {subError && (
                             <div className="vp-sub-error">{subError}</div>
                           )}
-                          {subResults.map((r) => (
-                            <button
-                              key={r.id}
-                              className="sub-result"
-                              onClick={() => downloadSubtitle(r)}
-                            >
-                              <FontAwesomeIcon icon={faDownload} />
-                              <span>
-                                {r.attributes?.release ||
-                                  r.attributes?.feature_details?.title ||
-                                  "Subtitle"}
-                                <span className="vp-lang-tag">
-                                  ({r.attributes?.language})
+                          {subResults.map((r) => {
+                            const isDownloading = downloadingSubId === r.id;
+                            return (
+                              <button
+                                key={r.id}
+                                className="sub-result"
+                                onClick={() => downloadSubtitle(r)}
+                                disabled={downloadingSubId !== null}
+                              >
+                                <FontAwesomeIcon
+                                  icon={isDownloading ? faSpinner : faDownload}
+                                  spin={isDownloading}
+                                />
+                                <span>
+                                  {isDownloading
+                                    ? "Downloading…"
+                                    : r.attributes?.release ||
+                                      r.attributes?.feature_details?.title ||
+                                      "Subtitle"}
+                                  {!isDownloading && (
+                                    <span className="vp-lang-tag">
+                                      ({r.attributes?.language})
+                                    </span>
+                                  )}
                                 </span>
-                              </span>
-                            </button>
-                          ))}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -1944,8 +1996,15 @@ export default function VideoPlayer() {
                 </div>
               </div>
             </div>
-
-            <div className="custom-subtitle-overlay"> </div>
+            {activeCueText && (
+              <div className="custom-subtitle-overlay">
+                {activeCueText.split("\n").map((line, i) => (
+                  <span key={i} className="custom-subtitle-line">
+                    {line.replace(/<[^>]+>/g, "")}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
