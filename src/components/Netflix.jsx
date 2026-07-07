@@ -5,7 +5,6 @@ import Loading from "../components/Loading";
 import "../css/Netflix.css";
 
 // Safe cache reader — same pattern as Genre.jsx fix.
-// Prevents "undefined" / corrupt JSON from crashing the page.
 function safeGetCache(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -29,13 +28,20 @@ function safeSetCache(key, value) {
   } catch {}
 }
 
+// unique across both movies and tv, since their id spaces overlap
+const uid = (item) => `${item.mediaType}-${item.id}`;
+
 function Netflix() {
   const [netflixMovies, setNetflixMovies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [activeAutoplayId, setActiveAutoplayId] = useState(null);
   const [hoveredMovieId, setHoveredMovieId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const timersRef = useRef({});
+  const seenIdsRef = useRef(new Set());
 
   useEffect(() => {
     const fetchNetflixContent = async () => {
@@ -44,17 +50,19 @@ function Netflix() {
       try {
         const cacheKey = "movies_netflix";
 
-        // FIX: use safe cache reader so corrupt/undefined entries don't throw
         const cached = safeGetCache(cacheKey);
         if (cached) {
           setNetflixMovies(cached);
+          cached.forEach((m) => seenIdsRef.current.add(uid(m)));
           setLoading(false);
           return;
         }
 
-        const data = await getNetflixMovies();
-        setNetflixMovies(data);
-        safeSetCache(cacheKey, data);
+        const { results, hasMore: more } = await getNetflixMovies(1);
+        setNetflixMovies(results);
+        results.forEach((m) => seenIdsRef.current.add(uid(m)));
+        setHasMore(more);
+        safeSetCache(cacheKey, results);
       } catch (err) {
         console.error(err);
         setError("Failed to load Netflix collection.");
@@ -131,6 +139,30 @@ function Netflix() {
     };
   }, [loading, netflixMovies]);
 
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    setError(null);
+    const nextPage = page + 1;
+
+    try {
+      const { results, hasMore: more } = await getNetflixMovies(nextPage);
+
+      const fresh = results.filter((m) => !seenIdsRef.current.has(uid(m)));
+      fresh.forEach((m) => seenIdsRef.current.add(uid(m)));
+
+      setNetflixMovies((prev) => [...prev, ...fresh]);
+      setPage(nextPage);
+      setHasMore(more);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load more Netflix titles.");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   return (
     <div className="netflix-page-container">
       <div className="netflix-ambient-glow"></div>
@@ -156,48 +188,70 @@ function Netflix() {
         {loading ? (
           <Loading />
         ) : (
-          <div className="movie-grid-animated">
-            {netflixMovies.map((movie, index) => {
-              const isAutoplayActive =
-                String(hoveredMovieId) === String(movie.id) ||
-                String(activeAutoplayId) === String(movie.id);
+          <>
+            <div className="movie-grid-animated">
+              {netflixMovies.map((movie, index) => {
+                const id = uid(movie);
+                const isAutoplayActive =
+                  String(hoveredMovieId) === id ||
+                  String(activeAutoplayId) === id;
 
-              return (
-                <div
-                  className={`animated-card-holder ${isAutoplayActive ? "autoplay-active" : ""}`}
-                  style={{ "--card-delay": `${index * 0.05}s` }}
-                  key={movie.id}
-                  data-movie-id={movie.id}
-                  onMouseEnter={() => {
-                    if (window.innerWidth > 768) {
-                      setHoveredMovieId(movie.id);
-                      setActiveAutoplayId(movie.id);
-                    }
-                  }}
-                  onMouseLeave={() => {
-                    if (window.innerWidth > 768) setHoveredMovieId(null);
-                  }}
-                >
-                  {isAutoplayActive && movie.trailerUrl ? (
-                    <div className="inline-trailer-wrapper">
-                      <iframe
-                        src={`${movie.trailerUrl}?autoplay=1&mute=0&controls=1&modestbranding=1&rel=0`}
-                        title={movie.title || "Trailer"}
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                      <div className="floating-movie-card">
-                        <MovieCard movie={movie} className="inner-moviecard" />
+                return (
+                  <div
+                    className={`animated-card-holder ${isAutoplayActive ? "autoplay-active" : ""}`}
+                    style={{ "--card-delay": `${(index % 20) * 0.05}s` }}
+                    key={id}
+                    data-movie-id={id}
+                    onMouseEnter={() => {
+                      if (window.innerWidth > 768) {
+                        setHoveredMovieId(id);
+                        setActiveAutoplayId(id);
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      if (window.innerWidth > 768) setHoveredMovieId(null);
+                    }}
+                  >
+                    {isAutoplayActive && movie.trailerUrl ? (
+                      <div className="inline-trailer-wrapper">
+                        <iframe
+                          src={`${movie.trailerUrl}?autoplay=1&mute=0&controls=1&modestbranding=1&rel=0`}
+                          title={movie.title || "Trailer"}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                        <div className="floating-movie-card">
+                          <MovieCard
+                            movie={movie}
+                            className="inner-moviecard"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <MovieCard movie={movie} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    ) : (
+                      <MovieCard movie={movie} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {hasMore && netflixMovies.length > 0 && (
+              <div className="see-more-wrapper">
+                <button
+                  className="see-more-btn"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? "Loading..." : "See More"}
+                </button>
+              </div>
+            )}
+
+            {!hasMore && netflixMovies.length > 0 && (
+              <p className="end-of-list-msg">You've reached the end 🎬</p>
+            )}
+          </>
         )}
       </div>
     </div>

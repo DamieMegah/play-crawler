@@ -85,17 +85,14 @@ export const getMovieTrailer = async (id, mediaType = "movie") => {
   }
 };
 
-// FIX 2: Tag every item with its mediaType before fetching trailers so
-// getMovieTrailer knows which endpoint to call.
-// FIX 3: Replaced Promise.all (fails everything on one error) with
-// Promise.allSettled so a single missing trailer never wipes the whole list.
-export const getNetflixMovies = async () => {
+
+export const getNetflixMovies = async (page = 1) => {
   const [moviesRes, tvRes] = await Promise.all([
     fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&with_watch_monetization_types=flatrate`
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&with_watch_monetization_types=flatrate&page=${page}`
     ),
     fetch(
-      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&with_watch_monetization_types=flatrate`
+      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&with_watch_monetization_types=flatrate&page=${page}`
     ),
   ]);
 
@@ -123,10 +120,17 @@ export const getNetflixMovies = async () => {
     }))
   );
 
-  // Keep only fulfilled items; drop anything that somehow still rejected
-  return results
+  const items = results
     .filter((r) => r.status === "fulfilled")
     .map((r) => r.value);
+
+  return {
+    results: items,
+    // both endpoints paginate independently, so "more available" means
+    // either one still has pages left
+    hasMore:
+      page < (movies.total_pages || 1) || page < (tv.total_pages || 1),
+  };
 };
 
 export const getAnimeCollection = async () => {
