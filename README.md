@@ -1,4 +1,4 @@
-# Playgram - Premium Movie Discovery Platform
+# Playgcrawler - Premium Movie Discovery Platform
 
 A sleek, high-performance movie link crawler web app designed for film enthusiasts. Playgram delivers a cinematic discovery experience with a polished iOS-inspired interface, custom search functionality, and fluid animations built with React and Vite.
 
